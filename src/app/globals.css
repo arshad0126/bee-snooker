@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ===== Light Mode ===== */
 :root {
   --background: #ffffff;
@@ -159,6 +161,11 @@ body {
   border: 1px solid rgba(228, 228, 231, 0.5);
 }
 
+/* Mobile landscape target classes (default state) */
+.mobile-landscape-only {
+  display: none !important;
+}
+
 /* ===== Landscape-specific overrides ===== */
 @media (orientation: landscape) and (max-height: 500px) {
   /* Tighter spacing in landscape mobile */
@@ -178,5 +185,13 @@ body {
     padding-bottom: 0.25rem !important;
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
+  }
+  /* Show only in mobile landscape */
+  .mobile-landscape-only {
+    display: flex !important;
+  }
+  /* Hide in mobile landscape */
+  .mobile-landscape-hidden {
+    display: none !important;
   }
 }

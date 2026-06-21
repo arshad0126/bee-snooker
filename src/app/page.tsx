@@ -122,14 +122,14 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-radial-gradient">
+    <main className="min-h-screen bg-background text-foreground flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden">
       
       {/* Decorative Branding */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-2 mb-8">
         <div className="mx-auto w-14 h-14 bg-emerald-950/40 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/10">
           <Trophy size={32} />
         </div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-white font-sans mt-4">
+        <h1 className="text-4xl font-extrabold tracking-tight text-zinc-800 dark:text-white font-sans mt-4">
           Bee Snooker
         </h1>
         <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase font-mono">
@@ -140,13 +140,13 @@ export default function Home() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md space-y-6">
         
         {/* Navigation Tabs */}
-        <div className="flex border-b border-zinc-800 bg-zinc-900/50 p-1.5 rounded-xl">
+        <div className="flex border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900/50 p-1.5 rounded-xl">
           <button
             onClick={() => setActiveTab('join')}
             className={`grow py-2.5 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'join'
-                ? 'bg-zinc-800 text-white shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-white shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
             }`}
           >
             <LogIn size={16} />
@@ -156,8 +156,8 @@ export default function Home() {
             onClick={() => setActiveTab('create')}
             className={`grow py-2.5 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'create'
-                ? 'bg-zinc-800 text-white shadow-sm'
-                : 'text-zinc-400 hover:text-zinc-200'
+                ? 'bg-white dark:bg-zinc-800 text-zinc-800 dark:text-white shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
             }`}
           >
             <PlusCircle size={16} />
@@ -166,7 +166,7 @@ export default function Home() {
         </div>
 
         {/* Action Card */}
-        <Card className="border-zinc-800 bg-zinc-900/40 backdrop-blur-md shadow-2xl">
+        <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 backdrop-blur-md shadow-2xl">
           <CardContent className="pt-6">
             
             {/* JOIN CLUB FORM */}
@@ -178,7 +178,7 @@ export default function Home() {
                     placeholder="E.g. A9B8C7"
                     value={joinCode}
                     onChange={(e) => setJoinCode(e.target.value)}
-                    className="border-zinc-700 bg-zinc-800/40 text-white text-center text-lg font-bold font-mono placeholder-zinc-500 uppercase tracking-widest h-12"
+                    className="border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 text-zinc-800 dark:text-white text-center text-lg font-bold font-mono placeholder-zinc-450 uppercase tracking-widest h-12"
                     required
                     disabled={loading}
                   />

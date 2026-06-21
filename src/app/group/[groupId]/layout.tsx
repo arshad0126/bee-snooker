@@ -57,9 +57,9 @@ export default function GroupLayout({ children }: { children: React.ReactNode })
   const isScoringPage = pathname.includes('/session/') && !pathname.endsWith('/summary');
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-sans flex flex-col">
+    <div className="min-h-screen bg-background text-foreground font-sans flex flex-col transition-colors duration-300">
       {/* Header Navigation */}
-      <header className={`sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900 px-4 sm:px-6 shrink-0 transition-all ${
+      <header className={`sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-zinc-250 dark:border-zinc-900 px-4 sm:px-6 shrink-0 transition-all ${
         isScoringPage ? 'hidden lg:flex h-12' : 'h-16'
       }`}>
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
@@ -69,32 +69,32 @@ export default function GroupLayout({ children }: { children: React.ReactNode })
               <span className="text-lg tracking-wider uppercase font-sans">BEE</span>
             </Link>
             
-            <div className="h-4 w-px bg-zinc-800" />
+            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800" />
 
             <div className="relative">
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-1.5 text-sm font-semibold text-zinc-200 hover:text-white bg-zinc-900/50 hover:bg-zinc-900 py-1.5 px-3 rounded-lg border border-zinc-800"
+                className="flex items-center gap-1.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-zinc-900/50 hover:bg-zinc-200 dark:hover:bg-zinc-900 py-1.5 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 transition-colors"
               >
                 <span>{activeGroup ? activeGroup.name : 'Loading Club...'}</span>
                 <ChevronDown size={14} />
               </button>
 
               {dropdownOpen && (
-                <div className="absolute left-0 mt-2 w-56 rounded-xl border border-zinc-800 bg-zinc-900/95 p-1 shadow-2xl backdrop-blur-md z-50">
-                  <div className="text-[10px] font-bold text-zinc-500 uppercase px-2 py-1.5">Switch Club</div>
+                <div className="absolute left-0 mt-2 w-56 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/95 p-1 shadow-2xl backdrop-blur-md z-50">
+                  <div className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase px-2 py-1.5">Switch Club</div>
                   {recentGroups.map(g => (
                     <button
                       key={g.id}
                       onClick={() => handleSwitchGroup(g)}
-                      className={`w-full text-left p-2 rounded-lg text-sm transition-all hover:bg-zinc-850 ${
-                        g.id === groupId ? 'text-emerald-500 font-bold bg-zinc-850/35' : 'text-zinc-300'
+                      className={`w-full text-left p-2 rounded-lg text-sm transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+                        g.id === groupId ? 'text-emerald-500 font-bold bg-zinc-100 dark:bg-zinc-800' : 'text-zinc-650 dark:text-zinc-300'
                       }`}
                     >
                       {g.name}
                     </button>
                   ))}
-                  <div className="border-t border-zinc-800/80 my-1" />
+                  <div className="border-t border-zinc-200 dark:border-zinc-800 my-1" />
                   <button
                     onClick={handleLeave}
                     className="w-full text-left p-2 rounded-lg text-sm text-rose-500 hover:bg-rose-500/10 flex items-center gap-1.5 font-semibold"
@@ -119,7 +119,7 @@ export default function GroupLayout({ children }: { children: React.ReactNode })
                   className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl transition-all ${
                     isActive
                       ? 'bg-emerald-800 text-white shadow-sm'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+                      : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900/60'
                   }`}
                 >
                   <Icon size={14} />
@@ -146,7 +146,7 @@ export default function GroupLayout({ children }: { children: React.ReactNode })
               variant="secondary"
               size="sm"
               onClick={() => setShareOpen(true)}
-              className="flex items-center gap-1.5 text-xs border border-zinc-800 hover:bg-zinc-900 bg-zinc-900/50"
+              className="flex items-center gap-1.5 text-xs border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900/50 hover:bg-zinc-200 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-white transition-colors"
             >
               <Share2 size={13} />
               Share Code
@@ -156,7 +156,7 @@ export default function GroupLayout({ children }: { children: React.ReactNode })
       </header>
 
       {/* Sub Header for Mobile Navigation */}
-      <nav className={`md:hidden sticky top-16 z-30 bg-zinc-950 border-b border-zinc-900 p-1 flex justify-around shrink-0 transition-all ${
+      <nav className={`md:hidden sticky top-16 z-30 bg-background border-b border-zinc-250 dark:border-zinc-900 p-1 flex justify-around shrink-0 transition-all ${
         isScoringPage ? 'hidden' : ''
       }`}>
         {navItems.map(item => {
@@ -169,7 +169,7 @@ export default function GroupLayout({ children }: { children: React.ReactNode })
               className={`flex flex-col items-center gap-1 text-[10px] font-semibold py-2 px-4 rounded-xl grow text-center transition-all ${
                 isActive
                   ? 'text-emerald-500'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                  : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
               }`}
             >
               <Icon size={16} />
