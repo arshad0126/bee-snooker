@@ -1,0 +1,266 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter, Input } from '@/components/ui';
+import { getSupabaseClient } from '@/lib/supabase';
+import { useMatchStore, Group } from '@/lib/store';
+import { Trophy, PlusCircle, LogIn, ArrowRight, Club, Trash2 } from 'lucide-react';
+
+export default function Home() {
+  const router = useRouter();
+  const setGroup = useMatchStore((state) => state.setGroup);
+  
+  // States
+  const [activeTab, setActiveTab] = useState<'join' | 'create'>('join');
+  const [joinCode, setJoinCode] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [recentGroups, setRecentGroups] = useState<Group[]>([]);
+
+  // Load recent groups from localstorage
+  useEffect(() => {
+    const stored = localStorage.getItem('bee_snooker_recent_groups');
+    if (stored) {
+      try {
+        setRecentGroups(JSON.parse(stored));
+      } catch (e) {
+        console.error('Failed to parse recent groups', e);
+      }
+    }
+  }, []);
+
+  const handleJoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!joinCode.trim()) return;
+
+    setLoading(true);
+    try {
+      const code = joinCode.trim().toUpperCase();
+      // supabase requires the secret header to see the group record
+      const client = getSupabaseClient(code);
+      
+      const { data: group, error } = await client
+        .from('groups')
+        .select('*')
+        .eq('secret_code', code)
+        .single();
+
+      if (error || !group) {
+        alert('Group not found. Please verify the secret join code.');
+        setLoading(false);
+        return;
+      }
+
+      saveRecentGroup(group);
+      setGroup(group);
+      router.push(`/group/${group.id}`);
+    } catch (err) {
+      alert('Failed to connect to server.');
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) return;
+
+    setLoading(true);
+    try {
+      const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      // Create group on server (bypass auth headers for group creation)
+      const client = getSupabaseClient();
+      
+      const { data: group, error } = await client
+        .from('groups')
+        .insert({
+          name: newGroupName.trim(),
+          secret_code: randomCode,
+        })
+        .select()
+        .single();
+
+      if (error || !group) {
+        throw error;
+      }
+
+      saveRecentGroup(group);
+      setGroup(group);
+      router.push(`/group/${group.id}`);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to create group. Try again.');
+      setLoading(false);
+    }
+  };
+
+  const saveRecentGroup = (group: Group) => {
+    const stored = localStorage.getItem('bee_snooker_recent_groups');
+    let list: Group[] = [];
+    if (stored) {
+      try { list = JSON.parse(stored); } catch (e) {}
+    }
+    // Remove if already exists, then prepend
+    list = list.filter(g => g.id !== group.id);
+    list.unshift(group);
+    // Keep max 5
+    list = list.slice(0, 5);
+    localStorage.setItem('bee_snooker_recent_groups', JSON.stringify(list));
+    setRecentGroups(list);
+  };
+
+  const handleSelectRecent = (group: Group) => {
+    setGroup(group);
+    router.push(`/group/${group.id}`);
+  };
+
+  const handleDeleteRecent = (e: React.MouseEvent, groupId: string) => {
+    e.stopPropagation();
+    const updated = recentGroups.filter(g => g.id !== groupId);
+    localStorage.setItem('bee_snooker_recent_groups', JSON.stringify(updated));
+    setRecentGroups(updated);
+  };
+
+  return (
+    <main className="min-h-screen bg-zinc-950 text-white flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-radial-gradient">
+      
+      {/* Decorative Branding */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-2 mb-8">
+        <div className="mx-auto w-14 h-14 bg-emerald-950/40 border border-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/10">
+          <Trophy size={32} />
+        </div>
+        <h1 className="text-4xl font-extrabold tracking-tight text-white font-sans mt-4">
+          Bee Snooker
+        </h1>
+        <p className="text-sm font-semibold tracking-widest text-emerald-500 uppercase font-mono">
+          Every Shot Counts
+        </p>
+      </div>
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-md space-y-6">
+        
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-zinc-800 bg-zinc-900/50 p-1.5 rounded-xl">
+          <button
+            onClick={() => setActiveTab('join')}
+            className={`grow py-2.5 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === 'join'
+                ? 'bg-zinc-800 text-white shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <LogIn size={16} />
+            Join Club
+          </button>
+          <button
+            onClick={() => setActiveTab('create')}
+            className={`grow py-2.5 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === 'create'
+                ? 'bg-zinc-800 text-white shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <PlusCircle size={16} />
+            Create Club
+          </button>
+        </div>
+
+        {/* Action Card */}
+        <Card className="border-zinc-800 bg-zinc-900/40 backdrop-blur-md shadow-2xl">
+          <CardContent className="pt-6">
+            
+            {/* JOIN CLUB FORM */}
+            {activeTab === 'join' && (
+              <form onSubmit={handleJoin} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase text-zinc-400">Secret Group Code</label>
+                  <Input
+                    placeholder="E.g. A9B8C7"
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value)}
+                    className="border-zinc-700 bg-zinc-800/40 text-white text-center text-lg font-bold font-mono placeholder-zinc-500 uppercase tracking-widest h-12"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={loading || !joinCode}
+                  className="w-full bg-emerald-800 hover:bg-emerald-700 h-12 rounded-xl text-sm font-bold flex gap-1.5"
+                >
+                  {loading ? 'Validating...' : 'Join Club'}
+                  {!loading && <ArrowRight size={16} />}
+                </Button>
+              </form>
+            )}
+
+            {/* CREATE CLUB FORM */}
+            {activeTab === 'create' && (
+              <form onSubmit={handleCreate} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase text-zinc-400">Club or Group Name</label>
+                  <Input
+                    placeholder="E.g. Lucknow Snooker Club"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    className="border-zinc-700 bg-zinc-800/40 text-white text-base placeholder-zinc-500 h-12"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={loading || !newGroupName}
+                  className="w-full bg-emerald-800 hover:bg-emerald-700 h-12 rounded-xl text-sm font-bold flex gap-1.5"
+                >
+                  {loading ? 'Creating...' : 'Create Club'}
+                  {!loading && <ArrowRight size={16} />}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Groups List */}
+        {recentGroups.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 px-1">
+              Recent Clubs
+            </h3>
+            <div className="space-y-2">
+              {recentGroups.map((g) => (
+                <div
+                  key={g.id}
+                  onClick={() => handleSelectRecent(g)}
+                  className="flex items-center justify-between p-3.5 bg-zinc-900/60 border border-zinc-850 hover:border-emerald-600/30 rounded-xl cursor-pointer hover:bg-zinc-850 transition-all group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Club className="text-emerald-500/70 shrink-0" size={16} />
+                    <div className="truncate">
+                      <div className="text-sm font-semibold text-zinc-200 group-hover:text-white truncate">
+                        {g.name}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 font-mono tracking-wider">
+                        CODE: {g.secret_code}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => handleDeleteRecent(e, g.id)}
+                      className="p-1.5 text-zinc-600 hover:text-rose-500 hover:bg-zinc-800 rounded-lg transition-all"
+                      title="Remove from history"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <ArrowRight size={14} className="text-zinc-500 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
