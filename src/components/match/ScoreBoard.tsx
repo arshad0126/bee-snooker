@@ -147,24 +147,54 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
   // =============================================
   // FREE FOR ALL — Single Row Player Cards
   // =============================================
+  const sortedByScore = [...players].sort((a, b) => {
+    const scoreA = scores[a.player_id] || 0;
+    const scoreB = scores[b.player_id] || 0;
+    if (scoreA !== scoreB) {
+      return scoreB - scoreA;
+    }
+    return a.play_order - b.play_order;
+  });
+
   return (
     <div className="flex flex-row gap-3 overflow-x-auto pb-1">
       {players.map(p => {
         const isActive = activePlayerId === p.player_id;
         const snookered = requiresSnookers[p.player_id];
+        const rankIndex = sortedByScore.findIndex(sp => sp.player_id === p.player_id);
+
+        let borderClass = 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 hover:bg-zinc-50 dark:hover:bg-zinc-900/40';
+        let badgeColorClass = 'bg-zinc-50 dark:bg-zinc-900 text-zinc-850 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800';
+
+        if (rankIndex === 0) {
+          // 1st place: Green
+          borderClass = isActive
+            ? 'border-emerald-500 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 dark:from-emerald-950/30 dark:to-emerald-900/10 ring-2 ring-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.15)] scale-[1.02]'
+            : 'border-emerald-500/60 dark:border-emerald-555/40 bg-emerald-500/5 dark:bg-emerald-950/10 hover:bg-emerald-500/10 dark:hover:bg-emerald-950/20';
+          badgeColorClass = 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-450 border-emerald-500/20';
+        } else if (rankIndex === 1) {
+          // 2nd place: Orange
+          borderClass = isActive
+            ? 'border-orange-500 bg-gradient-to-br from-orange-500/10 to-orange-600/5 dark:from-orange-950/30 dark:to-orange-900/10 ring-2 ring-orange-500/20 shadow-[0_0_12px_rgba(249,115,22,0.15)] scale-[1.02]'
+            : 'border-orange-500/60 dark:border-orange-500/40 bg-orange-500/5 dark:bg-orange-950/10 hover:bg-orange-500/10 dark:hover:bg-orange-950/20';
+          badgeColorClass = 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20';
+        } else if (rankIndex >= 2) {
+          // 3rd place / least: Red
+          borderClass = isActive
+            ? 'border-rose-500 bg-gradient-to-br from-rose-500/10 to-rose-600/5 dark:from-rose-950/30 dark:to-rose-900/10 ring-2 ring-rose-500/20 shadow-[0_0_12px_rgba(244,63,94,0.15)] scale-[1.02]'
+            : 'border-rose-500/60 dark:border-rose-500/40 bg-rose-500/5 dark:bg-rose-950/10 hover:bg-rose-500/10 dark:hover:bg-rose-950/20';
+          badgeColorClass = 'bg-rose-500/10 text-rose-700 dark:text-rose-455 border-rose-500/20';
+        }
+
         return (
           <div
             key={p.player_id}
-            className={`flex-1 min-w-[200px] p-3.5 rounded-2xl border flex items-center justify-between transition-all duration-300 shadow-sm ${
-              isActive
-                ? 'border-emerald-500 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 dark:from-emerald-950/30 dark:to-emerald-900/10 animate-active-glow'
-                : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 hover:bg-zinc-50 dark:hover:bg-zinc-900/40'
-            }`}
+            className={`flex-1 min-w-[200px] p-3.5 rounded-2xl border flex items-center justify-between transition-all duration-300 shadow-sm ${borderClass}`}
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shrink-0 transition-all ${
                 isActive 
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-555/20 ring-2 ring-emerald-500/50' 
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-500/50' 
                   : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-450 border border-zinc-200 dark:border-zinc-800'
               }`}>
                 {p.player.photo_url ? (
@@ -176,6 +206,9 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
               <div className="truncate">
                 <div className="text-xs font-bold text-zinc-800 dark:text-zinc-100 truncate flex items-center gap-1.5">
                   <span className="truncate">{p.player.name}</span>
+                  {isActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                  )}
                   {p.is_breaker && (
                     <Badge variant="default" className="bg-emerald-700/15 text-emerald-700 dark:text-emerald-450 text-[8px] py-0 px-1 border-none font-bold shrink-0 leading-none">
                       BRK
@@ -192,11 +225,7 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
                   <ShieldAlert size={14} />
                 </span>
               )}
-              <span className={`font-mono text-2xl font-black py-1 px-3.5 rounded-xl border transition-all ${
-                isActive
-                  ? 'bg-emerald-950/20 dark:bg-emerald-950/50 text-emerald-650 dark:text-emerald-400 border-emerald-500/30 shadow-[0_0_12px_rgba(52,211,153,0.15)]'
-                  : 'bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800'
-              }`}>
+              <span className={`font-mono text-2xl font-black py-1 px-3.5 rounded-xl border transition-all ${badgeColorClass}`}>
                 {scores[p.player_id] || 0}
               </span>
             </div>

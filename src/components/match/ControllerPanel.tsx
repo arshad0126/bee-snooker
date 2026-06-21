@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Card, CardContent, Dialog, Select, Input } from '../ui';
-import { RotateCcw, AlertTriangle, CheckCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { RotateCcw, AlertTriangle, CheckCircle, RefreshCw, ArrowRight, Info } from 'lucide-react';
 
 interface ControllerPanelProps {
   activePlayerName: string;
@@ -20,13 +20,44 @@ interface ControllerPanelProps {
 
 const BALL_DETAILS = [
   { name: 'red', points: 1, dotBg: 'bg-red-500' },
-  { name: 'yellow', points: 2, dotBg: 'bg-yellow-400 border border-yellow-500/20' },
+  { name: 'yellow', points: 2, dotBg: 'bg-yellow-450 border border-yellow-500/20' },
   { name: 'green', points: 3, dotBg: 'bg-emerald-500' },
   { name: 'brown', points: 4, dotBg: 'bg-amber-700' },
   { name: 'blue', points: 5, dotBg: 'bg-blue-500' },
   { name: 'pink', points: 6, dotBg: 'bg-pink-400' },
   { name: 'black', points: 7, dotBg: 'bg-zinc-800 dark:bg-zinc-200' },
 ];
+
+const BALL_TILE_CLASSES: Record<string, { active: string; inactive: string }> = {
+  red: {
+    active: 'bg-red-500/15 border-red-500 text-red-600 dark:bg-red-950/30 dark:border-red-500 dark:text-red-400 ring-2 ring-red-500/20 scale-[1.03] shadow-[0_2px_8px_rgba(239,68,68,0.15)]',
+    inactive: 'bg-red-500/5 border-red-200/50 text-red-600/60 dark:bg-red-950/10 dark:border-red-900/30 dark:text-red-400/50 opacity-60 hover:opacity-100 hover:bg-red-500/10 dark:hover:bg-red-950/20'
+  },
+  yellow: {
+    active: 'bg-yellow-500/15 border-yellow-550 text-yellow-600 dark:bg-yellow-950/30 dark:border-yellow-500 dark:text-yellow-400 ring-2 ring-yellow-500/20 scale-[1.03] shadow-[0_2px_8px_rgba(234,179,8,0.15)]',
+    inactive: 'bg-yellow-500/5 border-yellow-200/50 text-yellow-600/60 dark:bg-yellow-950/10 dark:border-yellow-900/30 dark:text-yellow-400/55 opacity-60 hover:opacity-100 hover:bg-yellow-500/10 dark:hover:bg-yellow-950/20'
+  },
+  green: {
+    active: 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-500 dark:text-emerald-400 ring-2 ring-emerald-500/20 scale-[1.03] shadow-[0_2px_8px_rgba(16,185,129,0.15)]',
+    inactive: 'bg-emerald-500/5 border-emerald-250/50 text-emerald-600/65 dark:bg-emerald-950/10 dark:border-emerald-900/30 dark:text-emerald-400/50 opacity-60 hover:opacity-100 hover:bg-emerald-500/10 dark:hover:bg-emerald-950/20'
+  },
+  brown: {
+    active: 'bg-amber-700/15 border-amber-600 text-amber-800 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-450 ring-2 ring-amber-500/20 scale-[1.03] shadow-[0_2px_8px_rgba(180,83,9,0.15)]',
+    inactive: 'bg-amber-700/5 border-amber-200/50 text-amber-700/60 dark:bg-amber-950/10 dark:border-amber-900/30 dark:text-amber-500/45 opacity-60 hover:opacity-100 hover:bg-amber-700/10 dark:hover:bg-amber-950/20'
+  },
+  blue: {
+    active: 'bg-blue-500/15 border-blue-500 text-blue-700 dark:bg-blue-950/30 dark:border-blue-500 dark:text-blue-400 ring-2 ring-blue-500/20 scale-[1.03] shadow-[0_2px_8px_rgba(59,130,246,0.15)]',
+    inactive: 'bg-blue-500/5 border-blue-200/50 text-blue-600/60 dark:bg-blue-950/10 dark:border-blue-900/30 dark:text-blue-500/40 opacity-60 hover:opacity-100 hover:bg-blue-500/10 dark:hover:bg-blue-950/20'
+  },
+  pink: {
+    active: 'bg-pink-500/15 border-pink-500 text-pink-705 dark:bg-pink-950/30 dark:border-pink-500 dark:text-pink-400 ring-2 ring-pink-500/20 scale-[1.03] shadow-[0_2px_8px_rgba(236,72,153,0.15)]',
+    inactive: 'bg-pink-500/5 border-pink-200/50 text-pink-605/60 dark:bg-pink-950/10 dark:border-pink-900/30 dark:text-pink-500/40 opacity-60 hover:opacity-100 hover:bg-pink-500/10 dark:hover:bg-pink-950/20'
+  },
+  black: {
+    active: 'bg-zinc-800/15 border-zinc-700 text-zinc-800 dark:bg-zinc-200/15 dark:border-zinc-350 dark:text-zinc-200 ring-2 ring-zinc-500/20 scale-[1.03] shadow-[0_2px_8px_rgba(31,41,55,0.15)]',
+    inactive: 'bg-zinc-100/40 border-zinc-200/60 text-zinc-550 dark:bg-zinc-800/20 dark:border-zinc-800 dark:text-zinc-400/50 opacity-60 hover:opacity-100 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/45'
+  }
+};
 
 export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   activePlayerName,
@@ -47,6 +78,7 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   const [foulDialogOpen, setFoulDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [endFrameDialogOpen, setEndFrameDialogOpen] = useState(false);
+  const [foulCheckOpen, setFoulCheckOpen] = useState(false);
   
   // Custom foul input
   const [foulBall, setFoulBall] = useState<string>('red');
@@ -56,6 +88,9 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   const [frameWinnerId, setFrameWinnerId] = useState<string>(activePlayerId);
   const [frameWinnerTeam, setFrameWinnerTeam] = useState<'team_a' | 'team_b'>('team_a');
   const [frameNotes, setFrameNotes] = useState<string>('');
+
+  // Red/Color confirmation helper state
+  const [selectedColorBall, setSelectedColorBall] = useState<string | null>(null);
 
   // Undo Timer countdown visual helper
   const [countdown, setCountdown] = useState(10);
@@ -92,7 +127,34 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   const handlePot = (ballName: string) => {
     setPoppedBall(ballName);
     setTimeout(() => setPoppedBall(null), 250);
-    onRecordPot(activePlayerId, ballName);
+
+    // If potting a color when RED is on, verify if it was a foul or if they forgot to record a red
+    if (ballName !== 'red' && currentColorOn === 'red') {
+      setSelectedColorBall(ballName);
+      setFoulCheckOpen(true);
+    } else {
+      onRecordPot(activePlayerId, ballName);
+    }
+  };
+
+  const handleConfirmFoul = () => {
+    if (!selectedColorBall) return;
+    const pts = Math.max(4, BALL_DETAILS.find(b => b.name === selectedColorBall)?.points || 0);
+    onRecordFoul(activePlayerId, selectedColorBall, pts);
+    setFoulCheckOpen(false);
+    setSelectedColorBall(null);
+  };
+
+  const handleRegisterRedFirst = async () => {
+    if (!selectedColorBall) return;
+    try {
+      await onRecordPot(activePlayerId, 'red');
+      await onRecordPot(activePlayerId, selectedColorBall);
+    } catch (e) {
+      console.error(e);
+    }
+    setFoulCheckOpen(false);
+    setSelectedColorBall(null);
   };
 
   const handleFoulSubmit = () => {
@@ -122,15 +184,14 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
         {BALL_DETAILS.map(ball => {
           const isMatch = getIsMatch(ball.name);
           const isPopped = poppedBall === ball.name;
+          const style = BALL_TILE_CLASSES[ball.name];
+          const tileClass = isMatch ? style.active : style.inactive;
+
           return (
             <button
               key={ball.name}
               onClick={() => handlePot(ball.name)}
-              className={`h-15 sm:h-17 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer select-none border font-sans ${
-                isMatch
-                  ? 'border-emerald-500 dark:border-emerald-400 bg-emerald-500/10 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 scale-[1.03] shadow-[0_2px_8px_rgba(16,185,129,0.08)]'
-                  : 'border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-zinc-700 dark:text-zinc-200'
-              } ${isPopped ? 'animate-score-pop' : ''}`}
+              className={`h-15 sm:h-17 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer select-none border font-sans ${tileClass} ${isPopped ? 'animate-score-pop' : ''}`}
             >
               {/* Minimalist Solid Color Dot */}
               <div className={`w-2.5 h-2.5 rounded-full ${ball.dotBg}`} />
@@ -202,6 +263,33 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
           Reset Frame
         </button>
       </div>
+
+      {/* FOUL / RED CONFIRMATION DRAWER/DIALOG */}
+      <Dialog isOpen={foulCheckOpen} onClose={() => { setFoulCheckOpen(false); setSelectedColorBall(null); }} title="Verify Pot Shot">
+        <div className="space-y-4 text-center">
+          <div className="mx-auto w-12 h-12 bg-amber-100 dark:bg-amber-950/30 text-amber-600 rounded-full flex items-center justify-center">
+            <Info size={24} />
+          </div>
+          <div>
+            <h4 className="font-bold text-sm">You selected a {selectedColorBall?.toUpperCase()} ball</h4>
+            <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+              The current ball on is <strong>Red</strong>. Did you legally pot a Red first, or was this a foul?
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2.5 pt-2">
+            <Button variant="primary" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white" onClick={handleRegisterRedFirst}>
+              Potted a Red First (+1 pt & Color)
+            </Button>
+            <Button variant="danger" className="w-full bg-rose-600 hover:bg-rose-700 text-white" onClick={handleConfirmFoul}>
+              It was a Foul (Penalty to opponents)
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => { setFoulCheckOpen(false); setSelectedColorBall(null); }}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Dialog>
 
       {/* FOUL DIALOG */}
       <Dialog isOpen={foulDialogOpen} onClose={() => setFoulDialogOpen(false)} title="Record Foul Shot">
@@ -300,7 +388,7 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
                   onClick={() => setFrameWinnerTeam('team_a')}
                   className={`py-3 rounded-xl border text-center font-bold text-sm transition-all ${
                     frameWinnerTeam === 'team_a'
-                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-400'
+                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-850 dark:text-emerald-400'
                       : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
                   }`}
                 >
@@ -311,7 +399,7 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
                   onClick={() => setFrameWinnerTeam('team_b')}
                   className={`py-3 rounded-xl border text-center font-bold text-sm transition-all ${
                     frameWinnerTeam === 'team_b'
-                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-400'
+                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-850 dark:text-emerald-400'
                       : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
                   }`}
                 >
