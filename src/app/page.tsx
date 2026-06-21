@@ -18,14 +18,49 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [recentGroups, setRecentGroups] = useState<Group[]>([]);
 
-  // Load recent groups from localstorage
+  // Load recent groups from localstorage with automatic cleanup of old preloaded mock data
   useEffect(() => {
-    const stored = localStorage.getItem('bee_snooker_recent_groups');
-    if (stored) {
-      try {
-        setRecentGroups(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse recent groups', e);
+    if (typeof window !== 'undefined') {
+      const storedRecent = localStorage.getItem('bee_snooker_recent_groups');
+      const hasMockGroup = storedRecent?.includes('Lucknow Snooker Club') || 
+                           storedRecent?.includes('mock-group-id-1') ||
+                           localStorage.getItem('mock_sb_groups')?.includes('Lucknow Snooker Club');
+
+      if (hasMockGroup) {
+        // Clear all mock Postgres table simulators in localStorage
+        const mockTables = ['groups', 'players', 'sessions', 'device_controllers', 'frames', 'frame_players', 'frame_events'];
+        mockTables.forEach(table => {
+          localStorage.removeItem(`mock_sb_${table}`);
+        });
+
+        // Filter out Lucknow mock group from recent list
+        if (storedRecent) {
+          try {
+            const list = JSON.parse(storedRecent);
+            const filtered = list.filter((g: any) => g.id !== 'mock-group-id-1' && !g.name.includes('Lucknow'));
+            localStorage.setItem('bee_snooker_recent_groups', JSON.stringify(filtered));
+            setRecentGroups(filtered);
+          } catch (e) {
+            setRecentGroups([]);
+          }
+        }
+
+        // Clear active group if it was the mock group
+        const storedActive = localStorage.getItem('bee_snooker_active_group');
+        if (storedActive) {
+          try {
+            const active = JSON.parse(storedActive);
+            if (active.id === 'mock-group-id-1' || active.name.includes('Lucknow')) {
+              localStorage.removeItem('bee_snooker_active_group');
+            }
+          } catch (e) {}
+        }
+      } else if (storedRecent) {
+        try {
+          setRecentGroups(JSON.parse(storedRecent));
+        } catch (e) {
+          console.error('Failed to parse recent groups', e);
+        }
       }
     }
   }, []);
@@ -260,6 +295,21 @@ export default function Home() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Reset App cache option */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mt-6">
+        <button
+          onClick={() => {
+            if (confirm("Are you sure you want to start from scratch? This will clear all local clubs, players, and session data.")) {
+              localStorage.clear();
+              window.location.reload();
+            }
+          }}
+          className="text-[11px] text-zinc-550 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-350 underline transition-colors"
+        >
+          Reset All Local Data (Start from Scratch)
+        </button>
       </div>
     </main>
   );
