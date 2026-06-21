@@ -6,130 +6,19 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-
 // Detect if we should use local mock storage instead of connecting to a remote Supabase
 const isMock = supabaseUrl === 'https://your-project.supabase.co' || supabaseUrl === '';
 
-// Initial rich demonstration mock data
+// Initial mock data is empty by default so users start with a clean slate.
 const INITIAL_MOCK_DATA = {
-  groups: [
-    {
-      id: 'mock-group-id-1',
-      name: 'Lucknow Snooker Club',
-      secret_code: 'LUCKNOW',
-      created_at: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(),
-    }
-  ],
-  players: [
-    {
-      id: 'mock-player-arshad',
-      group_id: 'mock-group-id-1',
-      name: 'Arshad Khan',
-      photo_url: '',
-      status: 'active',
-      elo_rating: 1120,
-      created_at: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(),
-    },
-    {
-      id: 'mock-player-awais',
-      group_id: 'mock-group-id-1',
-      name: 'Awais Ahmad',
-      photo_url: '',
-      status: 'active',
-      elo_rating: 1050,
-      created_at: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(),
-    },
-    {
-      id: 'mock-player-suraj',
-      group_id: 'mock-group-id-1',
-      name: 'Suraj Prasad',
-      photo_url: '',
-      status: 'active',
-      elo_rating: 980,
-      created_at: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(),
-    },
-    {
-      id: 'mock-player-karan',
-      group_id: 'mock-group-id-1',
-      name: 'Karan Malhotra',
-      photo_url: '',
-      status: 'active',
-      elo_rating: 850,
-      created_at: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(),
-    }
-  ],
-  sessions: [
-    {
-      id: 'mock-session-1',
-      group_id: 'mock-group-id-1',
-      start_time: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-      end_time: new Date(Date.now() - 1 * 3600 * 1000).toISOString(),
-      duration_seconds: 3600,
-      photos: [],
-      notes: 'Inaugural match session at Lucknow Snooker Club!',
-      created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-    }
-  ],
-  device_controllers: [
-    {
-      group_id: 'mock-group-id-1',
-      controller_device_id: 'mock-device-id',
-      updated_at: new Date().toISOString(),
-    }
-  ],
-  frames: [
-    {
-      id: 'mock-frame-1',
-      session_id: 'mock-session-1',
-      reds_count: 15,
-      mode: 'free_for_all',
-      status: 'completed',
-      winner_id: 'mock-player-arshad',
-      notes: 'Arshad cleared the table with a high break of 35!',
-      created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-    },
-    {
-      id: 'mock-frame-2',
-      session_id: 'mock-session-1',
-      reds_count: 15,
-      mode: 'free_for_all',
-      status: 'completed',
-      winner_id: 'mock-player-awais',
-      notes: 'Awais secured a close frame victory after Suraj fouled on the pink.',
-      created_at: new Date(Date.now() - 1.5 * 3600 * 1000).toISOString(),
-    }
-  ],
-  frame_players: [
-    { frame_id: 'mock-frame-1', player_id: 'mock-player-arshad', play_order: 1, team_id: null, is_breaker: true },
-    { frame_id: 'mock-frame-1', player_id: 'mock-player-awais', play_order: 2, team_id: null, is_breaker: false },
-    { frame_id: 'mock-frame-1', player_id: 'mock-player-suraj', play_order: 3, team_id: null, is_breaker: false },
-    
-    { frame_id: 'mock-frame-2', player_id: 'mock-player-arshad', play_order: 1, team_id: null, is_breaker: false },
-    { frame_id: 'mock-frame-2', player_id: 'mock-player-awais', play_order: 2, team_id: null, is_breaker: true },
-    { frame_id: 'mock-frame-2', player_id: 'mock-player-suraj', play_order: 3, team_id: null, is_breaker: false },
-  ],
-  frame_events: [
-    // Frame 1 events
-    { id: 'fe-1', frame_id: 'mock-frame-1', player_id: 'mock-player-arshad', event_type: 'pot', ball: 'red', points: 1, sequence_no: 1, device_info: 'Controller', created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString() },
-    { id: 'fe-2', frame_id: 'mock-frame-1', player_id: 'mock-player-arshad', event_type: 'pot', ball: 'black', points: 7, sequence_no: 2, device_info: 'Controller', created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString() },
-    { id: 'fe-3', frame_id: 'mock-frame-1', player_id: 'mock-player-awais', event_type: 'pot', ball: 'red', points: 1, sequence_no: 3, device_info: 'Controller', created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString() },
-    { id: 'fe-4', frame_id: 'mock-frame-1', player_id: 'mock-player-awais', event_type: 'foul', ball: 'blue', points: 5, sequence_no: 4, device_info: 'Controller', created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString() },
-    
-    // Frame 2 events
-    { id: 'fe-5', frame_id: 'mock-frame-2', player_id: 'mock-player-awais', event_type: 'pot', ball: 'red', points: 1, sequence_no: 1, device_info: 'Controller', created_at: new Date(Date.now() - 1.5 * 3600 * 1000).toISOString() },
-    { id: 'fe-6', frame_id: 'mock-frame-2', player_id: 'mock-player-awais', event_type: 'pot', ball: 'pink', points: 6, sequence_no: 2, device_info: 'Controller', created_at: new Date(Date.now() - 1.5 * 3600 * 1000).toISOString() },
-  ]
+  groups: [],
+  players: [],
+  sessions: [],
+  device_controllers: [],
+  frames: [],
+  frame_players: [],
+  frame_events: []
 };
 
 // Initialize Mock database to LocalStorage if not exists
 if (typeof window !== 'undefined' && isMock) {
-  // Pre-seed recent groups
-  const recent = localStorage.getItem('bee_snooker_recent_groups');
-  if (!recent) {
-    localStorage.setItem('bee_snooker_recent_groups', JSON.stringify([
-      {
-        id: 'mock-group-id-1',
-        name: 'Lucknow Snooker Club',
-        secret_code: 'LUCKNOW',
-      }
-    ]));
-  }
 
   // Pre-seed tables
   Object.keys(INITIAL_MOCK_DATA).forEach((table) => {
