@@ -114,6 +114,7 @@ export default function Home() {
         .insert({
           name: newGroupName.trim(),
           secret_code: randomCode,
+          owner_id: user?.id || null,
         })
         .select()
         .single();

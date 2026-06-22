@@ -14,6 +14,7 @@ export interface Group {
   id: string;
   name: string;
   secret_code: string;
+  owner_id?: string;
 }
 
 export interface Session {
