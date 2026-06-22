@@ -313,6 +313,9 @@ class MockSupabaseClient {
 // Global Supabase client instance
 export const supabase = isMock ? (new MockSupabaseClient() as any) : createClient(supabaseUrl, supabaseAnonKey);
 
+// Cache for Supabase clients to avoid multiple instances warning and reuse sessions
+const clientCache: Record<string, any> = {};
+
 // Dynamic client creator with custom group secret headers
 export const getSupabaseClient = (secretCode?: string) => {
   if (isMock) {
@@ -333,12 +336,20 @@ export const getSupabaseClient = (secretCode?: string) => {
     }
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  const key = secretCode || 'default';
+  if (clientCache[key]) {
+    return clientCache[key];
+  }
+
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      persistSession: false,
+      persistSession: true,
     },
     global: {
       headers: secretCode ? { 'x-group-secret': secretCode } : {},
     },
   });
+
+  clientCache[key] = client;
+  return client;
 };
