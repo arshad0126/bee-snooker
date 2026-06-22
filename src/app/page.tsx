@@ -9,12 +9,10 @@ import { Trophy, PlusCircle, LogIn, ArrowRight, Club, Trash2 } from 'lucide-reac
 
 export default function Home() {
   const router = useRouter();
-  const { setGroup, user, signInWithGoogle, signOut } = useMatchStore((state) => ({
-    setGroup: state.setGroup,
-    user: state.user,
-    signInWithGoogle: state.signInWithGoogle,
-    signOut: state.signOut,
-  }));
+  const setGroup = useMatchStore((state) => state.setGroup);
+  const user = useMatchStore((state) => state.user);
+  const signInWithGoogle = useMatchStore((state) => state.signInWithGoogle);
+  const signOut = useMatchStore((state) => state.signOut);
   
   // States
   const [activeTab, setActiveTab] = useState<'join' | 'create'>('join');
