@@ -9,7 +9,12 @@ import { Trophy, PlusCircle, LogIn, ArrowRight, Club, Trash2 } from 'lucide-reac
 
 export default function Home() {
   const router = useRouter();
-  const setGroup = useMatchStore((state) => state.setGroup);
+  const { setGroup, user, signInWithGoogle, signOut } = useMatchStore((state) => ({
+    setGroup: state.setGroup,
+    user: state.user,
+    signInWithGoogle: state.signInWithGoogle,
+    signOut: state.signOut,
+  }));
   
   // States
   const [activeTab, setActiveTab] = useState<'join' | 'create'>('join');
@@ -231,27 +236,57 @@ export default function Home() {
 
             {/* CREATE CLUB FORM */}
             {activeTab === 'create' && (
-              <form onSubmit={handleCreate} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase text-zinc-400">Club or Group Name</label>
-                  <Input
-                    placeholder="E.g. Lucknow Snooker Club"
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    className="border-zinc-700 bg-zinc-800/40 text-white text-base placeholder-zinc-500 h-12"
-                    required
-                    disabled={loading}
-                  />
+              !user ? (
+                <div className="text-center py-4 space-y-4">
+                  <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                    Admin Access Required
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-450 leading-relaxed max-w-sm mx-auto">
+                    Only authenticated club administrators can create and manage snooker club rosters. Spectators can join via code without logging in.
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={signInWithGoogle}
+                    className="w-full bg-emerald-800 hover:bg-emerald-700 h-12 rounded-xl text-sm font-bold flex justify-center items-center gap-2 mt-2"
+                  >
+                    <LogIn size={16} />
+                    Sign in with Google
+                  </Button>
                 </div>
-                <Button
-                  type="submit"
-                  disabled={loading || !newGroupName}
-                  className="w-full bg-emerald-800 hover:bg-emerald-700 h-12 rounded-xl text-sm font-bold flex gap-1.5"
-                >
-                  {loading ? 'Creating...' : 'Create Club'}
-                  {!loading && <ArrowRight size={16} />}
-                </Button>
-              </form>
+              ) : (
+                <form onSubmit={handleCreate} className="space-y-4">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20 text-xs text-zinc-500">
+                    <span className="truncate">Admin: <strong>{user.email}</strong></span>
+                    <button
+                      type="button"
+                      onClick={signOut}
+                      className="text-rose-500 hover:text-rose-600 font-semibold underline underline-offset-2 ml-2 cursor-pointer"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase text-zinc-400">Club or Group Name</label>
+                    <Input
+                      placeholder="E.g. Lucknow Snooker Club"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      className="border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 text-zinc-800 dark:text-white text-base placeholder-zinc-500 h-12"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={loading || !newGroupName}
+                    className="w-full bg-emerald-800 hover:bg-emerald-700 h-12 rounded-xl text-sm font-bold flex gap-1.5"
+                  >
+                    {loading ? 'Creating...' : 'Create Club'}
+                    {!loading && <ArrowRight size={16} />}
+                  </Button>
+                </form>
+              )
             )}
           </CardContent>
         </Card>

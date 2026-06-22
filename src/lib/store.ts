@@ -71,6 +71,10 @@ export interface MatchState {
   framePlayers: (FramePlayer & { player: Player })[];
   frameEvents: FrameEvent[];
   
+  // Auth state
+  user: any | null;
+  session: any | null;
+  
   // Realtime Status
   isController: boolean;
   controllerDeviceId: string | null;
@@ -96,6 +100,11 @@ export interface MatchState {
   setGroup: (group: Group) => void;
   startSession: (groupId: string) => Promise<string>;
   endSession: (sessionId: string, notes?: string) => Promise<void>;
+  
+  // Auth actions
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+  checkSession: () => Promise<void>;
   setupFrame: (
     sessionId: string,
     redsCount: number,
@@ -331,6 +340,10 @@ export const useMatchStore = create<MatchState>((set, get) => {
     framePlayers: [],
     frameEvents: [],
     
+    // Auth initial state
+    user: null,
+    session: null,
+    
     isController: false,
     controllerDeviceId: null,
     isRealtimeConnected: false,
@@ -354,6 +367,46 @@ export const useMatchStore = create<MatchState>((set, get) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('bee_snooker_active_group', JSON.stringify(group));
       }
+    },
+
+    signInWithGoogle: async () => {
+      const client = getSupabaseClient();
+      if (!client.auth) return;
+      const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}` : '';
+      await client.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+        },
+      });
+    },
+
+    signOut: async () => {
+      const client = getSupabaseClient();
+      if (client.auth) {
+        await client.auth.signOut();
+      }
+      set({ user: null, session: null });
+    },
+
+    checkSession: async () => {
+      const client = getSupabaseClient();
+      if (!client.auth) return;
+      
+      const { data: { session } } = await client.auth.getSession();
+      if (session) {
+        set({ session, user: session.user });
+      } else {
+        set({ session: null, user: null });
+      }
+
+      client.auth.onAuthStateChange((_event: string, session: any) => {
+        if (session) {
+          set({ session, user: session.user });
+        } else {
+          set({ session: null, user: null });
+        }
+      });
     },
 
     initializeDevice: async (groupId: string) => {
