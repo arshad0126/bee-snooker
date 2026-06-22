@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import PWAClient from "@/components/shared/PWAClient";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 import "./globals.css";
@@ -52,6 +53,7 @@ export default function RootLayout({
         <PWAClient />
         {children}
         <ThemeToggle />
+        <SpeedInsights />
       </body>
     </html>
   );
