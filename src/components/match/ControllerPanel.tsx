@@ -59,6 +59,14 @@ const BALL_TILE_CLASSES: Record<string, { active: string; inactive: string }> = 
   }
 };
 
+const triggerHapticFeedback = () => {
+  if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      navigator.vibrate(12);
+    } catch (e) {}
+  }
+};
+
 export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   activePlayerName,
   activePlayerId,
@@ -126,6 +134,7 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   }
 
   const handlePot = (ballName: string) => {
+    triggerHapticFeedback();
     setPoppedBall(ballName);
     setTimeout(() => setPoppedBall(null), 250);
 
@@ -139,6 +148,7 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   };
 
   const handleConfirmFoul = () => {
+    triggerHapticFeedback();
     if (!selectedColorBall) return;
     const pts = Math.max(4, BALL_DETAILS.find(b => b.name === selectedColorBall)?.points || 0);
     onRecordFoul(activePlayerId, selectedColorBall, pts);
@@ -147,6 +157,7 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   };
 
   const handleRegisterRedFirst = async () => {
+    triggerHapticFeedback();
     if (!selectedColorBall) return;
     try {
       await onRecordPot(activePlayerId, 'red');
@@ -159,9 +170,20 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   };
 
   const handleFoulSubmit = () => {
+    triggerHapticFeedback();
     onRecordFoul(activePlayerId, foulBall, customFoulPoints, { red_pocketed: redPocketedDuringFoul });
     setFoulDialogOpen(false);
     setRedPocketedDuringFoul(false);
+  };
+
+  const handlePass = () => {
+    triggerHapticFeedback();
+    onRecordPass(activePlayerId);
+  };
+
+  const handleUndo = () => {
+    triggerHapticFeedback();
+    onUndo();
   };
 
   const handleEndFrameSubmit = () => {
@@ -208,7 +230,7 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
 
         {/* Pass Button */}
         <button
-          onClick={() => onRecordPass(activePlayerId)}
+          onClick={handlePass}
           className="h-15 sm:h-17 rounded-xl flex flex-col items-center justify-center gap-1 border border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-zinc-500 dark:text-zinc-400 transition-all duration-200 cursor-pointer"
         >
           <ArrowRight size={15} className="text-zinc-400 dark:text-zinc-550" />
@@ -222,7 +244,7 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
       <div className="grid grid-cols-3 gap-3">
         {/* Undo */}
         <button
-          onClick={onUndo}
+          onClick={handleUndo}
           disabled={!undoTimerActive}
           className={`flex items-center justify-center gap-1.5 h-11 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer ${
             undoTimerActive

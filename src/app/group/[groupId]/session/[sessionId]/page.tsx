@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useMatchStore, Player } from '@/lib/store';
 import { getSupabaseClient } from '@/lib/supabase';
+import { announceEvent } from '@/lib/announcer';
 import { Button, Card, Dialog, Input } from '@/components/ui';
 import { SetupFlow } from '@/components/match/SetupFlow';
 import { ScoreBoard } from '@/components/match/ScoreBoard';
@@ -11,6 +12,7 @@ import { ControllerPanel } from '@/components/match/ControllerPanel';
 import { MathematicalPanel } from '@/components/match/MathematicalPanel';
 import { TimelinePanel } from '@/components/match/TimelinePanel';
 import { StopCircle, Loader2, ArrowLeft, ClipboardList, X } from 'lucide-react';
+import OrientationGuard from '@/components/shared/OrientationGuard';
 
 export default function ActiveSession() {
   const params = useParams();
@@ -90,6 +92,17 @@ export default function ActiveSession() {
     }
   }, [activeFrame?.id]);
 
+  // Speech announcer tracking
+  const prevEventsLength = useRef(frameEvents.length);
+  
+  useEffect(() => {
+    if (frameEvents.length === prevEventsLength.current + 1) {
+      const lastEvent = frameEvents[frameEvents.length - 1];
+      announceEvent(frameEvents, lastEvent, framePlayers, scores);
+    }
+    prevEventsLength.current = frameEvents.length;
+  }, [frameEvents, framePlayers, scores]);
+
   // Add a new player inline
   const handleAddPlayer = async (name: string): Promise<Player> => {
     const client = getSupabaseClient();
@@ -137,6 +150,7 @@ export default function ActiveSession() {
 
   return (
     <div className="space-y-3 landscape-compact">
+      <OrientationGuard />
       
       {/* Active Session Header */}
       <div className="flex items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-900 pb-2.5 shrink-0">
