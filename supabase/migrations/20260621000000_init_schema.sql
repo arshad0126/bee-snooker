@@ -72,6 +72,7 @@ create table if not exists public.frame_events (
     points integer default 0 not null,
     sequence_no integer not null,
     device_info text not null,
+    metadata jsonb,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -136,3 +137,10 @@ create policy "Allow access via group secret" on public.frame_events
 
 create policy "Allow access via group secret" on public.achievements
   for all using (group_id in (select id from public.groups where secret_code = public.current_group_secret()));
+
+-- Enable Realtime for frame_events and device_controllers to support live scoreboard syncing
+begin;
+  alter publication supabase_realtime add table public.frame_events;
+  alter publication supabase_realtime add table public.device_controllers;
+commit;
+

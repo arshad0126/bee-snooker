@@ -6,6 +6,7 @@ import {
   calculateMultiplayerElo,
   calculateTeamElo,
 } from '../lib/snooker';
+import { useMatchStore } from '../lib/store';
 
 describe('Snooker Math & Scoring Engine', () => {
   
@@ -93,4 +94,47 @@ describe('Snooker Math & Scoring Engine', () => {
     expect(adjustments['p4']).toBe(-16);
   });
 
+});
+
+describe('Zustand Match Store & Foul Logic', () => {
+  test('recording a foul with red_pocketed metadata decrements redsRemaining, ends turn, and awards points to opponent', async () => {
+    // 1. Setup mock store state
+    useMatchStore.setState({
+      isController: true,
+      deviceId: 'test-device-id',
+      activeGroup: { id: 'group-1', name: 'Test Club', secret_code: 'TEST12' },
+      activeSession: { id: 'session-1', group_id: 'group-1', start_time: new Date().toISOString(), photos: [] },
+    });
+
+    // Pre-populate players in the mock database
+    localStorage.setItem('mock_sb_players', JSON.stringify([
+      { id: 'p1', name: 'Player 1', group_id: 'group-1', status: 'active', elo_rating: 1000 },
+      { id: 'p2', name: 'Player 2', group_id: 'group-1', status: 'active', elo_rating: 1000 },
+    ]));
+
+    const players = [
+      { id: 'p1', play_order: 1, is_breaker: true },
+      { id: 'p2', play_order: 2, is_breaker: false },
+    ];
+
+    // 2. Setup frame with 15 reds
+    const frameId = await useMatchStore.getState().setupFrame('session-1', 15, 'free_for_all', players);
+    expect(frameId).toBeDefined();
+
+    const initialState = useMatchStore.getState();
+    expect(initialState.redsRemaining).toBe(15);
+    expect(initialState.activePlayerId).toBe('p1');
+    expect(initialState.scores['p1']).toBe(0);
+    expect(initialState.scores['p2']).toBe(0);
+
+    // 3. Record foul: p1 fouls, pocketing a red ball (e.g. cue ball in-off on red)
+    await useMatchStore.getState().recordFoul('p1', 'red', 4, { red_pocketed: true });
+
+    // 4. Verify state after foul
+    const postFoulState = useMatchStore.getState();
+    expect(postFoulState.scores['p1']).toBe(0); // P1 gets 0 points
+    expect(postFoulState.scores['p2']).toBe(4); // Opponent P2 gets 4 points
+    expect(postFoulState.redsRemaining).toBe(14); // Red count is decremented by 1 (remains potted)
+    expect(postFoulState.activePlayerId).toBe('p2'); // Turn rotated to P2
+  });
 });

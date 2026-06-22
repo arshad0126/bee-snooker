@@ -58,6 +58,7 @@ export interface FrameEvent {
   created_at: string;
   metadata?: {
     undoes_event_id?: string;
+    red_pocketed?: boolean;
   };
 }
 
@@ -104,7 +105,7 @@ export interface MatchState {
   
   // Event-Sourced Frame Scorers
   recordPot: (playerId: string, ball: string) => Promise<void>;
-  recordFoul: (playerId: string, ball: string, customPoints?: number) => Promise<void>;
+  recordFoul: (playerId: string, ball: string, customPoints?: number, metadata?: any) => Promise<void>;
   recordPassTurn: (playerId: string) => Promise<void>;
   triggerUndo: () => Promise<void>;
   resetFrame: () => Promise<void>;
@@ -255,6 +256,11 @@ export const useMatchStore = create<MatchState>((set, get) => {
         // Foul ends the turn. Advance to next player.
         activePlayerId = getNextPlayerInRotation(pId, sortedPlayers, frame.mode);
         
+        // Decrement red ball count if pocketed during foul
+        if (event.metadata?.red_pocketed) {
+          redsRemaining = Math.max(0, redsRemaining - 1);
+        }
+
         // After a foul, we expect a RED (if any left) or the current clearance color
         expecting = redsRemaining > 0 ? 'red' : 'clearance';
 
@@ -569,7 +575,7 @@ export const useMatchStore = create<MatchState>((set, get) => {
       }, 10000);
     },
 
-    recordFoul: async (playerId: string, ball: string, customPoints?: number) => {
+    recordFoul: async (playerId: string, ball: string, customPoints?: number, metadata?: any) => {
       const frame = get().activeFrame;
       if (!frame || !get().isController) return;
 
@@ -588,6 +594,7 @@ export const useMatchStore = create<MatchState>((set, get) => {
           points,
           sequence_no: seqNo,
           device_info: `Controller (${get().deviceId.slice(0,6)})`,
+          metadata: metadata || null,
         })
         .select()
         .single();

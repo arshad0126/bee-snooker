@@ -9,7 +9,7 @@ interface ControllerPanelProps {
   currentColorOn: string | null;
   undoTimerActive: boolean;
   onRecordPot: (playerId: string, ball: string) => Promise<void>;
-  onRecordFoul: (playerId: string, ball: string, points?: number) => Promise<void>;
+  onRecordFoul: (playerId: string, ball: string, points?: number, metadata?: any) => Promise<void>;
   onRecordPass: (playerId: string) => Promise<void>;
   onUndo: () => Promise<void>;
   onResetFrame: () => Promise<void>;
@@ -91,6 +91,7 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
 
   // Red/Color confirmation helper state
   const [selectedColorBall, setSelectedColorBall] = useState<string | null>(null);
+  const [redPocketedDuringFoul, setRedPocketedDuringFoul] = useState(false);
 
   // Undo Timer countdown visual helper
   const [countdown, setCountdown] = useState(10);
@@ -158,8 +159,9 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   };
 
   const handleFoulSubmit = () => {
-    onRecordFoul(activePlayerId, foulBall, customFoulPoints);
+    onRecordFoul(activePlayerId, foulBall, customFoulPoints, { red_pocketed: redPocketedDuringFoul });
     setFoulDialogOpen(false);
+    setRedPocketedDuringFoul(false);
   };
 
   const handleEndFrameSubmit = () => {
@@ -336,6 +338,21 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
               ))}
             </div>
           </div>
+
+          {currentColorOn === 'red' && (
+            <div className="flex items-center gap-2.5 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20">
+              <input
+                id="redPocketed"
+                type="checkbox"
+                checked={redPocketedDuringFoul}
+                onChange={(e) => setRedPocketedDuringFoul(e.target.checked)}
+                className="w-4 h-4 accent-rose-600 rounded cursor-pointer"
+              />
+              <label htmlFor="redPocketed" className="text-xs font-semibold text-zinc-650 dark:text-zinc-350 cursor-pointer select-none">
+                A Red ball was pocketed (in-off / potted on foul)
+              </label>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-900">
             <Button variant="outline" className="grow" onClick={() => setFoulDialogOpen(false)}>
