@@ -44,6 +44,10 @@ export const MathematicalPanel: React.FC<MathematicalPanelProps> = ({
   const [expanded, setExpanded] = React.useState(false);
   const ballDot = currentColorOn ? BALL_DOT_COLORS[currentColorOn] || 'bg-zinc-550' : 'bg-zinc-550';
   const ballTextColor = currentColorOn ? BALL_TEXT_COLORS[currentColorOn] || 'text-zinc-500' : 'text-zinc-500';
+  
+  // Try to parse lead from statusText (e.g. "Points remaining: 102. Lead is 10.")
+  const leadMatch = statusText ? statusText.match(/Lead is (-?\d+)/i) : null;
+  const parsedLead = leadMatch ? leadMatch[1] : null;
 
   return (
     <>
@@ -135,35 +139,46 @@ export const MathematicalPanel: React.FC<MathematicalPanelProps> = ({
       }`}>
         <div className="flex items-center justify-between px-3 py-2 text-xs">
           {/* Left: Key info items */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             {/* Ball On */}
-            <div className="flex items-center gap-1.5">
-              <div className={`w-3 h-3 rounded-full shrink-0 ${ballDot}`} />
-              <span className={`font-bold uppercase text-[11px] ${ballTextColor}`}>
+            <div className="flex items-center gap-1 shrink-0">
+              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${ballDot}`} />
+              <span className={`font-bold uppercase text-[10px] ${ballTextColor}`}>
                 {currentColorOn || '—'}
               </span>
             </div>
 
-            <div className="w-px h-3.5 bg-zinc-200 dark:bg-zinc-800" />
+            <div className="w-px h-3 bg-zinc-200 dark:bg-zinc-800 shrink-0" />
 
             {/* Reds Left */}
-            <div className="flex items-center gap-1">
-              <span className="text-zinc-400 dark:text-zinc-550 font-medium text-[11px]">Reds</span>
-              <span className="font-bold font-mono text-rose-600 dark:text-rose-400">{redsRemaining}</span>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <span className="text-zinc-450 dark:text-zinc-500 font-medium text-[10px]">Reds</span>
+              <span className="font-bold font-mono text-rose-600 dark:text-rose-400 text-[11px]">{redsRemaining}</span>
             </div>
 
-            <div className="w-px h-3.5 bg-zinc-200 dark:bg-zinc-800" />
+            <div className="w-px h-3 bg-zinc-200 dark:bg-zinc-800 shrink-0" />
 
             {/* Points Left */}
-            <div className="flex items-center gap-1">
-              <span className="text-zinc-400 dark:text-zinc-550 font-medium text-[11px]">Pts</span>
-              <span className="font-bold font-mono text-emerald-700 dark:text-emerald-400">{pointsRemaining}</span>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <span className="text-zinc-450 dark:text-zinc-550 font-medium text-[10px]">Pts</span>
+              <span className="font-bold font-mono text-emerald-700 dark:text-emerald-400 text-[11px]">{pointsRemaining}</span>
             </div>
+
+            {parsedLead !== null && (
+              <>
+                <div className="w-px h-3 bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+                {/* Lead */}
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <span className="text-zinc-450 dark:text-zinc-550 font-medium text-[10px]">Lead</span>
+                  <span className="font-bold font-mono text-amber-600 dark:text-amber-500 text-[11px]">{parsedLead}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right: Frame Status + Expand */}
-          <div className="flex items-center gap-2">
-            <span className={`font-semibold text-[11px] ${
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className={`font-semibold text-[10px] ${
               isFrameSecured ? 'text-emerald-700 dark:text-emerald-400' : 'text-zinc-500 dark:text-zinc-450'
             }`}>
               {isFrameSecured ? '✓ Secured' : 'Active'}
@@ -172,9 +187,10 @@ export const MathematicalPanel: React.FC<MathematicalPanelProps> = ({
             {statusText && (
               <button
                 onClick={() => setExpanded(!expanded)}
-                className="flex items-center gap-0.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors p-0.5"
+                className="flex items-center gap-0.5 text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-300 transition-colors p-0.5"
+                aria-label="Toggle frame analysis details"
               >
-                <ChevronDown size={14} className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+                <ChevronDown size={12} className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
               </button>
             )}
           </div>

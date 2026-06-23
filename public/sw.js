@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bee-snooker-cache-v1';
+const CACHE_NAME = 'bee-snooker-cache-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -32,36 +32,35 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch Event (Offline first fallback)
+// Fetch Event (Network First with Cache Fallback)
 self.addEventListener('fetch', (event) => {
-  // Only cache GET requests
+  // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      
-      return fetch(event.request)
-        .then((networkResponse) => {
-          // Check if valid response
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-            return networkResponse;
-          }
+  // Only handle requests from our own origin (exclude external APIs / chrome extensions)
+  if (!event.request.url.startsWith(self.location.origin)) return;
 
-          // Cache clones of successful network requests
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        // Cache clones of successful network responses
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
-
-          return networkResponse;
-        })
-        .catch(() => {
-          // Offline fallback
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Offline: Fallback to Cache
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Default offline fallback
           return caches.match('/');
         });
-    })
+      })
   );
 });
