@@ -74,6 +74,10 @@ export interface PlayerAnalytics {
   slowestShot: number;
   visits: number;
   share: number;
+  visitsList?: number[];
+  fastestVisit?: number;
+  slowestVisit?: number;
+  averageVisit?: number;
 }
 
 export interface MatchState {
@@ -113,6 +117,7 @@ export interface MatchState {
   lastActionAt: string | null;
   frameAnalytics: Record<string, PlayerAnalytics>;
   currentBreak: number;
+  visitStartAt: string | null;
   soundEnabled: boolean;
 
   // Actions
@@ -181,6 +186,7 @@ export const useMatchStore = create<MatchState>((set, get) => {
         lastActionAt: null,
         frameAnalytics: {},
         currentBreak: 0,
+        visitStartAt: null,
       };
     }
 
@@ -321,7 +327,7 @@ export const useMatchStore = create<MatchState>((set, get) => {
     const playersList = fPlayers.map(fp => ({ id: fp.player_id, name: fp.player.name }));
     const evaluation = evaluateFrameStatus(scores, playersList, pointsRemaining);
 
-    // 6. Calculate Time Analytics
+    // 6. Calculate Time Analytics (including visits list)
     const frameAnalytics: Record<string, PlayerAnalytics> = {};
     fPlayers.forEach(p => {
       frameAnalytics[p.player_id] = {
@@ -333,15 +339,22 @@ export const useMatchStore = create<MatchState>((set, get) => {
         slowestShot: 0,
         visits: 0,
         share: 0,
+        visitsList: [],
+        fastestVisit: 0,
+        slowestVisit: 0,
+        averageVisit: 0,
       };
     });
 
     let totalFrameTime = 0;
-    let lastPlayerId: string | null = null;
     const shotCounts: Record<string, number> = {};
     fPlayers.forEach(p => {
       shotCounts[p.player_id] = 0;
     });
+
+    // Track visits sequentially
+    let activeVisitPlayerId: string | null = null;
+    let activeVisitDuration = 0;
 
     activeEvents.forEach(e => {
       if (e.event_type !== 'pot' && e.event_type !== 'foul' && e.event_type !== 'pass_turn') {
@@ -352,10 +365,12 @@ export const useMatchStore = create<MatchState>((set, get) => {
       if (!pId || !frameAnalytics[pId]) return;
 
       const duration = e.metadata?.duration_seconds || 0;
+      
+      // Shot-level duration tracking
       frameAnalytics[pId].totalTime += duration;
       totalFrameTime += duration;
-
       shotCounts[pId] += 1;
+      
       if (duration < frameAnalytics[pId].fastestShot) {
         frameAnalytics[pId].fastestShot = duration;
       }
@@ -363,12 +378,35 @@ export const useMatchStore = create<MatchState>((set, get) => {
         frameAnalytics[pId].slowestShot = duration;
       }
 
-      if (pId !== lastPlayerId) {
-        frameAnalytics[pId].visits += 1;
-        lastPlayerId = pId;
+      // Visit-level tracking
+      if (activeVisitPlayerId === null) {
+        activeVisitPlayerId = pId;
+        activeVisitDuration = duration;
+      } else if (activeVisitPlayerId === pId) {
+        activeVisitDuration += duration;
+      } else {
+        // Turn changed! Save old visit
+        if (activeVisitPlayerId) {
+          const playerAnalytic = frameAnalytics[activeVisitPlayerId];
+          if (playerAnalytic && playerAnalytic.visitsList) {
+            playerAnalytic.visitsList.push(activeVisitDuration);
+          }
+        }
+        // Start new visit
+        activeVisitPlayerId = pId;
+        activeVisitDuration = duration;
       }
     });
 
+    // If there is an active ongoing visit at the end of the events list, save it
+    if (activeVisitPlayerId) {
+      const playerAnalytic = frameAnalytics[activeVisitPlayerId];
+      if (playerAnalytic && playerAnalytic.visitsList) {
+        playerAnalytic.visitsList.push(activeVisitDuration);
+      }
+    }
+
+    // Now finalize all metrics for each player
     fPlayers.forEach(p => {
       const a = frameAnalytics[p.player_id];
       const shots = shotCounts[p.player_id];
@@ -378,6 +416,24 @@ export const useMatchStore = create<MatchState>((set, get) => {
       if (a.fastestShot === Infinity) {
         a.fastestShot = 0;
       }
+
+      // Visit analytics calculation
+      const vList = a.visitsList || [];
+      a.visits = vList.length;
+      if (vList.length > 0) {
+        a.fastestVisit = Math.min(...vList);
+        a.slowestVisit = Math.max(...vList);
+        a.averageVisit = vList.reduce((sum, v) => sum + v, 0) / vList.length;
+        
+        // Total frame time is the sum of all visits
+        a.totalTime = vList.reduce((sum, v) => sum + v, 0);
+      } else {
+        a.fastestVisit = 0;
+        a.slowestVisit = 0;
+        a.averageVisit = 0;
+        a.totalTime = 0;
+      }
+
       if (totalFrameTime > 0) {
         a.share = Math.round((a.totalTime / totalFrameTime) * 100);
       }
@@ -399,6 +455,11 @@ export const useMatchStore = create<MatchState>((set, get) => {
       }
     }
 
+    // Find when the active player's current visit started
+    const otherPlayerEvents = activeEvents.filter(e => e.player_id !== activePlayerId);
+    const lastOtherEvent = otherPlayerEvents[otherPlayerEvents.length - 1];
+    const visitStartAt = lastOtherEvent ? lastOtherEvent.created_at : frame.created_at;
+
     return {
       scores,
       teamScores,
@@ -412,6 +473,7 @@ export const useMatchStore = create<MatchState>((set, get) => {
       lastActionAt,
       frameAnalytics,
       currentBreak,
+      visitStartAt,
     };
   };
 
@@ -470,6 +532,7 @@ export const useMatchStore = create<MatchState>((set, get) => {
     lastActionAt: null,
     frameAnalytics: {},
     currentBreak: 0,
+    visitStartAt: null,
     soundEnabled: typeof window !== 'undefined' ? localStorage.getItem('bee_snooker_muted') !== 'true' : true,
 
     // Actions

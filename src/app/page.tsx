@@ -39,6 +39,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
   const [recentGroups, setRecentGroups] = useState<Group[]>([]);
+  const [ownedClubs, setOwnedClubs] = useState<Group[]>([]);
   const [isStandalone, setIsStandalone] = useState(true);
 
   // Detect if app is running as fullscreen standalone PWA
@@ -115,6 +116,52 @@ export default function Home() {
       }
     }
   }, []);
+
+  // Fetch owned groups for the logged-in user and merge with local storage list
+  useEffect(() => {
+    const fetchOwnedGroups = async () => {
+      if (!user) {
+        setOwnedClubs([]);
+        return;
+      }
+      try {
+        const client = getSupabaseClient();
+        const { data, error } = await client
+          .from('groups')
+          .select('*')
+          .eq('owner_id', user.id);
+        
+        if (error) throw error;
+        
+        if (data) {
+          setOwnedClubs(data);
+          
+          if (data.length > 0) {
+            const stored = localStorage.getItem('bee_snooker_recent_groups');
+            let localList: Group[] = [];
+            if (stored) {
+              try { localList = JSON.parse(stored); } catch (e) {}
+            }
+            
+            const merged = [...localList];
+            data.forEach((group: Group) => {
+              if (!merged.some(g => g.id === group.id)) {
+                merged.push(group);
+              }
+            });
+            
+            const trimmed = merged.slice(0, 10);
+            localStorage.setItem('bee_snooker_recent_groups', JSON.stringify(trimmed));
+            setRecentGroups(trimmed);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch owned groups:', err);
+      }
+    };
+
+    fetchOwnedGroups();
+  }, [user]);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -382,34 +429,70 @@ export default function Home() {
                       Sign in with Google to Create
                     </Button>
                   ) : (
-                    <form onSubmit={handleCreate} className="space-y-3">
-                      <div className="flex items-center justify-between p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 text-[10px] text-zinc-500">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 text-[10px] text-zinc-500 font-mono">
                         <span className="truncate">Admin: <strong className="text-zinc-700 dark:text-zinc-300">{user.email}</strong></span>
                         <button
                           type="button"
                           onClick={signOut}
-                          className="text-rose-500 hover:text-rose-600 font-semibold underline underline-offset-2 cursor-pointer ml-1"
+                          className="text-rose-500 hover:text-rose-600 font-semibold underline underline-offset-2 cursor-pointer ml-1 inline-touch-exempt"
                         >
                           Sign Out
                         </button>
                       </div>
-                      <Input
-                        placeholder="E.g. Lucknow Snooker Club"
-                        value={newGroupName}
-                        onChange={(e) => setNewGroupName(e.target.value)}
-                        className="border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/40 text-zinc-800 dark:text-white text-sm placeholder-zinc-450 dark:placeholder-zinc-550 h-10"
-                        required
-                        disabled={loading || localLoading}
-                      />
-                      <Button
-                        type="submit"
-                        disabled={loading || localLoading || !newGroupName.trim()}
-                        className="w-full bg-blue-800 hover:bg-blue-700 text-white h-10 rounded-xl text-xs font-bold flex gap-1.5 justify-center items-center"
-                      >
-                        {loading ? 'Creating Cloud Club...' : 'Create Cloud Club'}
-                        {!loading && <ArrowRight size={14} />}
-                      </Button>
-                    </form>
+
+                      {ownedClubs.length > 0 && (
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold uppercase text-zinc-400">Your Clubs</label>
+                          <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                            {ownedClubs.map((g) => (
+                              <button
+                                key={g.id}
+                                type="button"
+                                onClick={() => handleSelectRecent(g)}
+                                className="w-full flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500/50 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/30 rounded-xl cursor-pointer transition-all text-left group inline-touch-exempt"
+                              >
+                                <div className="min-w-0">
+                                  <div className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 truncate">
+                                    {g.name}
+                                  </div>
+                                  <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                                    CODE: {g.secret_code}
+                                  </div>
+                                </div>
+                                <ArrowRight size={14} className="text-zinc-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+                              </button>
+                            ))}
+                          </div>
+                          
+                          <div className="flex items-center gap-3 py-1">
+                            <div className="h-[1px] grow bg-zinc-200 dark:bg-zinc-800"></div>
+                            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Or Create New</span>
+                            <div className="h-[1px] grow bg-zinc-200 dark:bg-zinc-800"></div>
+                          </div>
+                        </div>
+                      )}
+
+                      <form onSubmit={handleCreate} className="space-y-3">
+                        <label className="block text-xs font-bold uppercase text-zinc-400">Club Name</label>
+                        <Input
+                          placeholder="E.g. Lucknow Snooker Club"
+                          value={newGroupName}
+                          onChange={(e) => setNewGroupName(e.target.value)}
+                          className="border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/40 text-zinc-800 dark:text-white text-sm placeholder-zinc-450 dark:placeholder-zinc-550 h-10"
+                          required
+                          disabled={loading || localLoading}
+                        />
+                        <Button
+                          type="submit"
+                          disabled={loading || localLoading || !newGroupName.trim()}
+                          className="w-full bg-blue-800 hover:bg-blue-700 text-white h-10 rounded-xl text-xs font-bold flex gap-1.5 justify-center items-center"
+                        >
+                          {loading ? 'Creating Cloud Club...' : 'Create Cloud Club'}
+                          {!loading && <ArrowRight size={14} />}
+                        </Button>
+                      </form>
+                    </div>
                   )}
                 </div>
               </div>

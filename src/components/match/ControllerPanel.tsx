@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, CardContent, Dialog, Select, Input } from '../ui';
-import { RotateCcw, AlertTriangle, CheckCircle, RefreshCw, ArrowRight, Info } from 'lucide-react';
-import { useMatchStore } from '../../lib/store';
+import { Button, Dialog, Input } from '../ui';
+import { RotateCcw, AlertTriangle, ArrowRight, RefreshCw, Info } from 'lucide-react';
 
 interface ControllerPanelProps {
-  activePlayerName: string;
   activePlayerId: string;
   isController: boolean;
   currentColorOn: string | null;
@@ -14,13 +12,12 @@ interface ControllerPanelProps {
   onRecordPass: (playerId: string) => Promise<void>;
   onUndo: () => Promise<void>;
   onResetFrame: () => Promise<void>;
-  onEndFrame: (winnerId?: string, winnerTeam?: 'team_a' | 'team_b', notes?: string) => Promise<void>;
   players: { id: string; name: string; team_id?: 'team_a' | 'team_b' }[];
   mode: 'free_for_all' | 'team';
 }
 
 const BALL_DETAILS = [
-  { name: 'red', label: 'RED', points: 1, dotBg: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' },
+  { name: 'red', label: 'RED', points: 1, dotBg: 'bg-red-650 shadow-[0_0_8px_rgba(220,38,38,0.5)]' },
   { name: 'yellow', label: 'YEL', points: 2, dotBg: 'bg-yellow-450 border border-yellow-500/20 shadow-[0_0_8px_rgba(234,179,8,0.3)]' },
   { name: 'green', label: 'GRN', points: 3, dotBg: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' },
   { name: 'brown', label: 'BRN', points: 4, dotBg: 'bg-amber-700 shadow-[0_0_8px_rgba(180,83,9,0.4)]' },
@@ -35,8 +32,8 @@ const BALL_TILE_CLASSES: Record<string, { active: string; inactive: string }> = 
     inactive: 'bg-red-500/5 border-red-200/50 text-red-650/60 dark:bg-red-950/10 dark:border-red-900/30 dark:text-red-400/50 opacity-60 hover:opacity-100 hover:bg-red-500/10 dark:hover:bg-red-950/20'
   },
   yellow: {
-    active: 'bg-yellow-500/15 border-yellow-550 text-yellow-650 dark:bg-yellow-950/30 dark:border-yellow-500 dark:text-yellow-450 ring-2 ring-yellow-500/20 scale-[1.02] shadow-[0_2px_8px_rgba(234,179,8,0.15)]',
-    inactive: 'bg-yellow-500/5 border-yellow-200/50 text-yellow-650/60 dark:bg-yellow-950/10 dark:border-yellow-900/30 dark:text-yellow-450/55 opacity-60 hover:opacity-100 hover:bg-yellow-500/10 dark:hover:bg-yellow-950/20'
+    active: 'bg-yellow-500/15 border-yellow-550 text-yellow-650 dark:bg-yellow-950/30 dark:border-yellow-500 dark:text-yellow-455 ring-2 ring-yellow-500/20 scale-[1.02] shadow-[0_2px_8px_rgba(234,179,8,0.15)]',
+    inactive: 'bg-yellow-500/5 border-yellow-200/50 text-yellow-650/60 dark:bg-yellow-950/10 dark:border-yellow-900/30 dark:text-yellow-455/55 opacity-60 hover:opacity-100 hover:bg-yellow-500/10 dark:hover:bg-yellow-950/20'
   },
   green: {
     active: 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-500 dark:text-emerald-400 ring-2 ring-emerald-500/20 scale-[1.02] shadow-[0_2px_8px_rgba(16,185,129,0.15)]',
@@ -69,7 +66,6 @@ const triggerHapticFeedback = () => {
 };
 
 export const ControllerPanel: React.FC<ControllerPanelProps> = ({
-  activePlayerName,
   activePlayerId,
   isController,
   currentColorOn,
@@ -79,33 +75,19 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
   onRecordPass,
   onUndo,
   onResetFrame,
-  onEndFrame,
   players,
   mode,
 }) => {
-  // Modal states
   const [foulDialogOpen, setFoulDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [endFrameDialogOpen, setEndFrameDialogOpen] = useState(false);
   const [foulCheckOpen, setFoulCheckOpen] = useState(false);
   
-  // Custom foul input
   const [foulBall, setFoulBall] = useState<string>('red');
   const [customFoulPoints, setCustomFoulPoints] = useState<number>(4);
 
-  // End Frame states
-  const [frameWinnerId, setFrameWinnerId] = useState<string>(activePlayerId);
-  const [frameWinnerTeam, setFrameWinnerTeam] = useState<'team_a' | 'team_b'>('team_a');
-  const [frameNotes, setFrameNotes] = useState<string>('');
-
-  // Red/Color confirmation helper state
   const [selectedColorBall, setSelectedColorBall] = useState<string | null>(null);
   const [redPocketedDuringFoul, setRedPocketedDuringFoul] = useState(false);
-
-  // Undo Timer countdown visual helper
   const [countdown, setCountdown] = useState(10);
-
-  // Pop animation tracking
   const [poppedBall, setPoppedBall] = useState<string | null>(null);
 
   useEffect(() => {
@@ -125,18 +107,11 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
     return () => clearInterval(timer);
   }, [undoTimerActive]);
 
-  useEffect(() => {
-    // Keep frameWinnerId updated with current active striker
-    if (activePlayerId) {
-      setFrameWinnerId(activePlayerId);
-    }
-  }, [activePlayerId]);
-
   if (!isController) {
     return (
-      <div className="rounded-2xl border border-amber-500/10 bg-amber-500/5 p-3 text-center text-xs text-zinc-550 dark:text-zinc-400 flex items-center justify-center gap-2 select-none">
-        <AlertTriangle size={14} className="text-amber-600 dark:text-amber-500" />
-        <span>Spectator mode — score updates sync in real time.</span>
+      <div className="rounded-xl border border-amber-500/10 bg-amber-500/5 p-2 text-center text-xs text-zinc-500 dark:text-zinc-450 flex items-center justify-center gap-1.5 select-none">
+        <AlertTriangle size={12} className="text-amber-600 dark:text-amber-500" />
+        <span>Spectator Mode — score updates sync in real time.</span>
       </div>
     );
   }
@@ -146,7 +121,6 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
     setPoppedBall(ballName);
     setTimeout(() => setPoppedBall(null), 250);
 
-    // If potting a color when RED is on, verify if it was a foul or if they forgot to record a red
     if (ballName !== 'red' && currentColorOn === 'red') {
       setSelectedColorBall(ballName);
       setFoulCheckOpen(true);
@@ -194,158 +168,52 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
     onUndo();
   };
 
-  const handleOpenEndFrameDialog = () => {
-    const storeState = useMatchStore.getState();
-    const currentScores = storeState.scores;
-    const currentTeamScores = storeState.teamScores;
-
-    if (mode === 'team') {
-      const winnerTeam = currentTeamScores.team_a >= currentTeamScores.team_b ? 'team_a' : 'team_b';
-      setFrameWinnerTeam(winnerTeam);
-    } else {
-      let highestScore = -1;
-      let winnerId = activePlayerId;
-      
-      players.forEach(p => {
-        const score = currentScores[p.id] || 0;
-        if (score > highestScore) {
-          highestScore = score;
-          winnerId = p.id;
-        }
-      });
-      
-      setFrameWinnerId(winnerId);
-    }
-    setEndFrameDialogOpen(true);
-  };
-
-  const handleEndFrameSubmit = () => {
-    onEndFrame(
-      mode === 'team' ? undefined : frameWinnerId,
-      mode === 'team' ? frameWinnerTeam : undefined,
-      frameNotes
-    );
-    setEndFrameDialogOpen(false);
-  };
-
   const getIsMatch = (ballName: string) => {
     return (currentColorOn === 'color' && ballName !== 'red') || currentColorOn === ballName;
   };
 
-  // Split balls into rows for mobile: row1 = 4 balls, row2 = 3 balls
-  const row1Balls = BALL_DETAILS.slice(0, 4); // red, yellow, green, brown
-  const row2Balls = BALL_DETAILS.slice(4);     // blue, pink, black
-
   return (
-    <div className="space-y-2.5 select-none font-sans">
-      
-      {/* 1. Panel Header: Striker & End Frame */}
-      <div className="flex items-center justify-between bg-zinc-50/80 dark:bg-zinc-900/40 border border-zinc-200/60 dark:border-zinc-800/60 p-3 rounded-2xl">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-          <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-            Active: <strong className="text-zinc-800 dark:text-zinc-100 ml-1">{activePlayerName}</strong>
-          </span>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            onClick={handleOpenEndFrameDialog}
-            className="border-rose-500/25 dark:border-rose-550/20 text-rose-600 dark:text-rose-400 hover:bg-rose-500/5 hover:text-rose-700 font-extrabold text-[11px] h-8 px-2.5 rounded-lg active:scale-95"
-          >
-            End Frame
-          </Button>
-        </div>
+    <div className="space-y-2 select-none font-sans">
+      {/* 1. Ball Grid — 7-column inline row */}
+      <div className="grid grid-cols-7 gap-1.5 bg-zinc-50/50 dark:bg-zinc-950/20 border border-zinc-200 dark:border-zinc-800 p-1.5 rounded-xl shadow-sm">
+        {BALL_DETAILS.map(ball => {
+          const isMatch = getIsMatch(ball.name);
+          const isPopped = poppedBall === ball.name;
+          const style = BALL_TILE_CLASSES[ball.name];
+          const tileClass = isMatch ? style.active : style.inactive;
+
+          return (
+            <button
+              key={ball.name}
+              onClick={() => handlePot(ball.name)}
+              className={`h-[56px] rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all duration-200 cursor-pointer border active:scale-95 ${tileClass} ${isPopped ? 'animate-score-pop' : ''}`}
+            >
+              <div className={`w-2.5 h-2.5 rounded-full ${ball.dotBg}`} />
+              <span className="text-[8px] font-bold uppercase tracking-wider opacity-75">
+                {ball.label}
+              </span>
+              <span className="text-xs font-black tracking-tight leading-none mt-0.5">
+                +{ball.points}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* 2. Ball Grid — 4+3 layout on mobile, 7-col on desktop */}
-      <div className="bg-zinc-50/50 dark:bg-zinc-950/20 border border-zinc-200/80 dark:border-zinc-800/80 p-2.5 sm:p-3 rounded-2xl shadow-sm">
-        {/* Mobile: 4+3 rows */}
-        <div className="sm:hidden space-y-2">
-          <div className="grid grid-cols-4 gap-2">
-            {row1Balls.map(ball => {
-              const isMatch = getIsMatch(ball.name);
-              const isPopped = poppedBall === ball.name;
-              const style = BALL_TILE_CLASSES[ball.name];
-              const tileClass = isMatch ? style.active : style.inactive;
-
-              return (
-                <button
-                  key={ball.name}
-                  onClick={() => handlePot(ball.name)}
-                  className={`h-[60px] rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer border font-sans active:scale-95 ${tileClass} ${isPopped ? 'animate-score-pop' : ''}`}
-                >
-                  <div className={`w-4 h-4 rounded-full ${ball.dotBg}`} />
-                  <div className="flex flex-col items-center leading-none">
-                    <span className="text-sm font-extrabold">+{ball.points}</span>
-                    <span className="text-[8px] font-bold uppercase tracking-wider opacity-70 mt-0.5">{ball.label}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {row2Balls.map(ball => {
-              const isMatch = getIsMatch(ball.name);
-              const isPopped = poppedBall === ball.name;
-              const style = BALL_TILE_CLASSES[ball.name];
-              const tileClass = isMatch ? style.active : style.inactive;
-
-              return (
-                <button
-                  key={ball.name}
-                  onClick={() => handlePot(ball.name)}
-                  className={`h-[60px] rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer border font-sans active:scale-95 ${tileClass} ${isPopped ? 'animate-score-pop' : ''}`}
-                >
-                  <div className={`w-4 h-4 rounded-full ${ball.dotBg}`} />
-                  <div className="flex flex-col items-center leading-none">
-                    <span className="text-sm font-extrabold">+{ball.points}</span>
-                    <span className="text-[8px] font-bold uppercase tracking-wider opacity-70 mt-0.5">{ball.label}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Desktop: 7-column grid */}
-        <div className="hidden sm:grid grid-cols-7 gap-2">
-          {BALL_DETAILS.map(ball => {
-            const isMatch = getIsMatch(ball.name);
-            const isPopped = poppedBall === ball.name;
-            const style = BALL_TILE_CLASSES[ball.name];
-            const tileClass = isMatch ? style.active : style.inactive;
-
-            return (
-              <button
-                key={ball.name}
-                onClick={() => handlePot(ball.name)}
-                className={`h-16 sm:h-18 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer border font-sans active:scale-95 ${tileClass} ${isPopped ? 'animate-score-pop' : ''}`}
-              >
-                <div className={`w-3 h-3 rounded-full ${ball.dotBg}`} />
-                <span className="text-sm font-extrabold tracking-tight">
-                  +{ball.points}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. Large Touch Target Action Bar */}
-      <div className="grid grid-cols-10 gap-2 sm:gap-3">
+      {/* 2. Action Bar */}
+      <div className="grid grid-cols-10 gap-1.5">
         {/* Undo - 3 columns */}
         <button
           onClick={handleUndo}
           disabled={!undoTimerActive}
-          className={`col-span-3 flex flex-col items-center justify-center gap-0.5 h-14 rounded-xl text-[11px] font-bold border transition-all duration-200 cursor-pointer active:scale-95 disabled:pointer-events-none disabled:active:scale-100 ${
+          className={`col-span-3 flex flex-col items-center justify-center gap-0.5 h-11 rounded-lg text-[9px] font-black border transition-all duration-200 cursor-pointer active:scale-95 disabled:pointer-events-none disabled:active:scale-100 ${
             undoTimerActive
-              ? 'bg-amber-600 hover:bg-amber-700 border-amber-600 text-white animate-pulse shadow-md shadow-amber-600/15'
-              : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-zinc-600 dark:text-zinc-350 shadow-sm'
+              ? 'bg-amber-600 hover:bg-amber-700 border-amber-600 text-white animate-pulse shadow-md shadow-amber-650/15'
+              : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-55 dark:hover:bg-zinc-850 text-zinc-600 dark:text-zinc-350 shadow-sm'
           }`}
         >
-          <RotateCcw size={15} />
-          <span className="uppercase tracking-wide mt-0.5">
+          <RotateCcw size={13} />
+          <span className="uppercase tracking-wide">
             Undo {undoTimerActive && `(${countdown})`}
           </span>
         </button>
@@ -353,29 +221,29 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
         {/* Foul - 3 columns */}
         <button
           onClick={() => setFoulDialogOpen(true)}
-          className="col-span-3 flex flex-col items-center justify-center gap-0.5 h-14 rounded-xl text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white border border-rose-600 transition-all duration-200 cursor-pointer active:scale-95 shadow-md shadow-rose-600/15"
+          className="col-span-3 flex flex-col items-center justify-center gap-0.5 h-11 rounded-lg text-[9px] font-black bg-rose-600 hover:bg-rose-705 text-white border border-rose-600 transition-all duration-200 cursor-pointer active:scale-95 shadow-md shadow-rose-600/15"
         >
-          <AlertTriangle size={15} />
-          <span className="uppercase tracking-wide mt-0.5">Foul</span>
+          <AlertTriangle size={13} />
+          <span className="uppercase tracking-wide">Foul</span>
         </button>
 
-        {/* Pass - 4 columns (Largest, most reachable) */}
+        {/* Pass - 4 columns (Largest) */}
         <button
           onClick={handlePass}
-          className="col-span-4 flex items-center justify-center gap-1.5 h-14 rounded-xl text-sm font-black bg-emerald-700 hover:bg-emerald-800 text-white border border-emerald-750 transition-all duration-200 cursor-pointer active:scale-95 shadow-md shadow-emerald-700/15"
+          className="col-span-4 flex items-center justify-center gap-1.5 h-11 rounded-lg text-xs font-black bg-emerald-700 hover:bg-emerald-800 text-white border border-emerald-750 transition-all duration-200 cursor-pointer active:scale-95 shadow-md shadow-emerald-700/15"
         >
           <span className="uppercase tracking-widest font-black">PASS</span>
-          <ArrowRight size={16} />
+          <ArrowRight size={13} />
         </button>
       </div>
 
-      {/* 4. Small Reset Frame Trigger */}
-      <div className="flex justify-center pt-1">
+      {/* 3. Reset Frame Link */}
+      <div className="flex justify-center">
         <button
           onClick={() => setResetDialogOpen(true)}
-          className="text-[10px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1.5 opacity-40 hover:opacity-100 transition-all duration-200 cursor-pointer py-1 px-3 rounded-lg"
+          className="text-[9px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 opacity-40 hover:opacity-100 transition-all duration-200 cursor-pointer py-0.5 px-2 rounded"
         >
-          <RefreshCw size={10} />
+          <RefreshCw size={8} />
           Reset Frame
         </button>
       </div>
@@ -393,14 +261,14 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-col gap-2.5 pt-2">
-            <Button variant="primary" className="w-full bg-emerald-700 hover:bg-emerald-850 text-white h-12" onClick={handleRegisterRedFirst}>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button variant="primary" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white h-11" onClick={handleRegisterRedFirst}>
               Potted a Red First (+1 pt & Color)
             </Button>
-            <Button variant="danger" className="w-full bg-rose-600 hover:bg-rose-700 text-white h-12" onClick={handleConfirmFoul}>
+            <Button variant="danger" className="w-full bg-rose-600 hover:bg-rose-700 text-white h-11" onClick={handleConfirmFoul}>
               It was a Foul (Penalty to opponents)
             </Button>
-            <Button variant="outline" className="w-full h-11" onClick={() => { setFoulCheckOpen(false); setSelectedColorBall(null); }}>
+            <Button variant="outline" className="w-full h-10" onClick={() => { setFoulCheckOpen(false); setSelectedColorBall(null); }}>
               Cancel
             </Button>
           </div>
@@ -421,10 +289,10 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
                     setFoulBall(ball.name);
                     setCustomFoulPoints(Math.max(4, ball.points));
                   }}
-                  className={`py-2.5 px-1 text-xs font-semibold rounded-xl border text-center transition-all ${
+                  className={`py-2 px-1 text-xs font-semibold rounded-xl border text-center transition-all ${
                     foulBall === ball.name
-                      ? 'border-rose-600 bg-rose-50/50 dark:bg-rose-950/20 text-rose-750 dark:text-rose-400'
-                      : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 bg-white dark:bg-zinc-950'
+                      ? 'border-rose-600 bg-rose-50/50 dark:bg-rose-950/20 text-rose-750 dark:text-rose-455'
+                      : 'border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400 bg-white dark:bg-zinc-950'
                   }`}
                 >
                   {ball.label} (+{Math.max(4, ball.points)})
@@ -441,9 +309,9 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
                   key={val}
                   type="button"
                   onClick={() => setCustomFoulPoints(val)}
-                  className={`py-2.5 rounded-xl border font-mono text-center font-bold text-sm transition-all ${
+                  className={`py-2 rounded-xl border font-mono text-center font-bold text-sm transition-all ${
                     customFoulPoints === val
-                      ? 'border-rose-600 bg-rose-50/50 dark:bg-rose-950/20 text-rose-750 dark:text-rose-450'
+                      ? 'border-rose-600 bg-rose-50/50 dark:bg-rose-950/20 text-rose-750 dark:text-rose-455'
                       : 'border-zinc-200 dark:border-zinc-800 text-zinc-650 dark:text-zinc-400 bg-white dark:bg-zinc-950'
                   }`}
                 >
@@ -454,13 +322,13 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
           </div>
 
           {currentColorOn === 'red' && (
-            <div className="flex items-center gap-2.5 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20">
+            <div className="flex items-center gap-2 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20">
               <input
                 id="redPocketed"
                 type="checkbox"
                 checked={redPocketedDuringFoul}
                 onChange={(e) => setRedPocketedDuringFoul(e.target.checked)}
-                className="w-5 h-5 accent-rose-650 rounded cursor-pointer"
+                className="w-4 h-4 accent-rose-650 rounded cursor-pointer"
               />
               <label htmlFor="redPocketed" className="text-xs font-semibold text-zinc-650 dark:text-zinc-350 cursor-pointer select-none">
                 A Red ball was pocketed (in-off / potted on foul)
@@ -468,12 +336,12 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
             </div>
           )}
 
-          <div className="flex gap-3 pt-4 border-t border-zinc-150 dark:border-zinc-900">
-            <Button variant="outline" className="grow h-12" onClick={() => setFoulDialogOpen(false)}>
+          <div className="flex gap-2 pt-2 border-t border-zinc-150 dark:border-zinc-900">
+            <Button variant="outline" className="grow h-11" onClick={() => setFoulDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="danger" className="grow flex gap-1.5 bg-rose-600 text-white h-12" onClick={handleFoulSubmit}>
-              <AlertTriangle size={16} />
+            <Button variant="danger" className="grow flex gap-1.5 bg-rose-600 text-white h-11" onClick={handleFoulSubmit}>
+              <AlertTriangle size={14} />
               Confirm Foul
             </Button>
           </div>
@@ -486,89 +354,22 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
           <div className="mx-auto w-12 h-12 bg-rose-100 dark:bg-rose-950/30 text-rose-600 rounded-full flex items-center justify-center">
             <AlertTriangle size={24} />
           </div>
-          <p className="text-sm text-zinc-650 dark:text-zinc-400">
+          <p className="text-sm text-zinc-650 dark:text-zinc-450">
             Are you sure you want to reset this frame? All scored pots and fouls in this frame will be permanently deleted.
           </p>
-          <div className="flex gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-900">
-            <Button variant="outline" className="grow h-12" onClick={() => setResetDialogOpen(false)}>
+          <div className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-900">
+            <Button variant="outline" className="grow h-11" onClick={() => setResetDialogOpen(false)}>
               Cancel
             </Button>
             <Button
               variant="danger"
-              className="grow bg-rose-600 text-white h-12"
+              className="grow bg-rose-600 text-white h-11"
               onClick={() => {
                 onResetFrame();
                 setResetDialogOpen(false);
               }}
             >
               Reset Frame
-            </Button>
-          </div>
-        </div>
-      </Dialog>
-
-      {/* END FRAME CONFIRMATION */}
-      <Dialog isOpen={endFrameDialogOpen} onClose={() => setEndFrameDialogOpen(false)} title="Complete Frame">
-        <div className="space-y-4">
-          {mode === 'team' ? (
-            <div>
-              <label className="block text-xs font-bold uppercase text-zinc-450 mb-2">Winning Team</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFrameWinnerTeam('team_a')}
-                  className={`py-3 rounded-xl border text-center font-bold text-sm transition-all ${
-                    frameWinnerTeam === 'team_a'
-                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-850 dark:text-emerald-400'
-                      : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
-                  }`}
-                >
-                  TEAM A
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFrameWinnerTeam('team_b')}
-                  className={`py-3 rounded-xl border text-center font-bold text-sm transition-all ${
-                    frameWinnerTeam === 'team_b'
-                      ? 'border-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-855 dark:text-emerald-400'
-                      : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'
-                  }`}
-                >
-                  TEAM B
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs font-bold uppercase text-zinc-450 mb-2">Winner Player</label>
-              <Select
-                value={frameWinnerId}
-                onChange={e => setFrameWinnerId(e.target.value)}
-              >
-                {players.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-xs font-bold uppercase text-zinc-450 mb-2">Frame Summary Notes</label>
-            <Input
-              placeholder="e.g. Black ball finish, Great comeback"
-              value={frameNotes}
-              onChange={e => setFrameNotes(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-900">
-            <Button variant="outline" className="grow h-12" onClick={() => setEndFrameDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" className="grow bg-emerald-700 hover:bg-emerald-800 text-white h-12" onClick={handleEndFrameSubmit}>
-              Save & Complete
             </Button>
           </div>
         </div>
