@@ -7,6 +7,23 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { useMatchStore, Group } from '@/lib/store';
 import { Trophy, PlusCircle, LogIn, ArrowRight, Club, Trash2 } from 'lucide-react';
 
+const generateSecureCode = (length = 6): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const array = new Uint32Array(length);
+  if (typeof window !== 'undefined' && window.crypto) {
+    window.crypto.getRandomValues(array);
+  } else {
+    for (let i = 0; i < length; i++) {
+      array[i] = Math.floor(Math.random() * 0x100000000);
+    }
+  }
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars[array[i] % chars.length];
+  }
+  return result;
+};
+
 export default function Home() {
   const router = useRouter();
   const setGroup = useMatchStore((state) => state.setGroup);
@@ -136,7 +153,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const randomCode = generateSecureCode(6);
       // Create group on server (bypass auth headers for group creation)
       const client = getSupabaseClient();
       const { data: group, error } = await client
@@ -169,7 +186,7 @@ export default function Home() {
 
     setLocalLoading(true);
     try {
-      const randomCode = 'LOCAL-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const randomCode = 'LOCAL-' + generateSecureCode(6);
       const client = getSupabaseClient(randomCode);
       
       const { data: group, error } = await client
