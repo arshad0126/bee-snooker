@@ -130,6 +130,13 @@ class MockQueryBuilder {
     return this;
   }
 
+  in(col: string, vals: any[]) {
+    this.filters.push((item) => {
+      return vals.includes(item[col]);
+    });
+    return this;
+  }
+
   order(col: string, opts?: { ascending?: boolean }) {
     this.sortCol = col;
     this.sortAsc = opts?.ascending !== false;
