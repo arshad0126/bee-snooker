@@ -67,7 +67,7 @@ create table if not exists public.frame_events (
     id uuid default gen_random_uuid() primary key,
     frame_id uuid references public.frames(id) on delete cascade not null,
     player_id uuid references public.players(id) on delete cascade,
-    event_type text check (event_type in ('pot', 'foul', 'undo', 'end_frame', 'reset_frame')) not null,
+    event_type text check (event_type in ('pot', 'foul', 'undo', 'end_frame', 'reset_frame', 'pass_turn')) not null,
     ball text check (ball in ('red', 'yellow', 'green', 'brown', 'blue', 'pink', 'black')),
     points integer default 0 not null,
     sequence_no integer not null,

@@ -37,20 +37,16 @@ export default function ThemeToggle() {
     <button
       onClick={toggle}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className="fixed bottom-5 right-5 z-50 w-11 h-11 rounded-full flex items-center justify-center
-        bg-zinc-100 dark:bg-zinc-900/80 backdrop-blur-md
-        border border-zinc-200/80 dark:border-zinc-700/50
-        shadow-lg shadow-emerald-500/10 dark:shadow-emerald-500/5
-        hover:shadow-xl hover:shadow-emerald-500/20
+      className="fixed top-3 right-3 z-50 w-9 h-9 rounded-full flex items-center justify-center
+        bg-zinc-100/80 dark:bg-zinc-900/80 backdrop-blur-md
+        border border-zinc-200/60 dark:border-zinc-700/40
+        shadow-sm
         hover:scale-105 active:scale-95
         transition-all duration-300 ease-out
-        text-emerald-700 dark:text-emerald-400"
-      style={{
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-      }}
+        text-zinc-600 dark:text-zinc-400"
     >
       <div key={isDark ? 'moon' : 'sun'} className="animate-theme-icon">
-        {isDark ? <Moon size={18} /> : <Sun size={18} />}
+        {isDark ? <Moon size={14} /> : <Sun size={14} />}
       </div>
     </button>
   );

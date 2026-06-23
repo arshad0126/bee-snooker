@@ -117,7 +117,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
 Select.displayName = 'Select';
 
 // ==========================================
-// DIALOG (MODAL) COMPONENT
+// DIALOG (MODAL) COMPONENT — Bottom Sheet on Mobile
 // ==========================================
 interface DialogProps {
   isOpen: boolean;
@@ -130,19 +130,25 @@ export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, title, children
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       {/* Overlay */}
       <div 
-        className="fixed inset-0 bg-zinc-950/40 backdrop-blur-sm transition-opacity duration-300"
+        className="fixed inset-0 bg-zinc-950/50 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
-      {/* Modal */}
-      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-6 shadow-xl transition-all duration-300 animate-in fade-in zoom-in-95">
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-900 mb-4">
+      {/* Bottom Sheet (mobile) / Centered Modal (desktop) */}
+      <div className="relative z-10 w-full sm:max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 sm:p-6 shadow-2xl animate-slide-up"
+        style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
+      >
+        {/* Drag handle (mobile only) */}
+        <div className="sm:hidden flex justify-center mb-3">
+          <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+        </div>
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-900 mb-4">
           {title && <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{title}</h3>}
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-600 dark:hover:text-zinc-200 transition-all duration-200"
+            className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 hover:text-zinc-600 dark:hover:text-zinc-200 transition-all duration-200"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>

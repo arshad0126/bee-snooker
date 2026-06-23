@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase, getSupabaseClient } from './supabase';
 import { calculatePointsRemaining, evaluateFrameStatus, BALL_VALUES, COLOR_SEQUENCE } from './snooker';
+import { sounds } from './sound';
 
 export interface Player {
   id: string;
@@ -60,7 +61,19 @@ export interface FrameEvent {
   metadata?: {
     undoes_event_id?: string;
     red_pocketed?: boolean;
+    duration_seconds?: number;
   };
+}
+
+export interface PlayerAnalytics {
+  playerId: string;
+  name: string;
+  totalTime: number;
+  averageShot: number;
+  fastestShot: number;
+  slowestShot: number;
+  visits: number;
+  share: number;
 }
 
 export interface MatchState {
@@ -96,6 +109,12 @@ export interface MatchState {
   lastEventId: string | null;
   undoTimerActive: boolean;
 
+  // Turn Timer & Audio states
+  lastActionAt: string | null;
+  frameAnalytics: Record<string, PlayerAnalytics>;
+  currentBreak: number;
+  soundEnabled: boolean;
+
   // Actions
   initializeDevice: (groupId: string) => Promise<void>;
   setGroup: (group: Group) => void;
@@ -106,6 +125,7 @@ export interface MatchState {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
+  setSoundEnabled: (enabled: boolean) => void;
   setupFrame: (
     sessionId: string,
     redsCount: number,
@@ -158,6 +178,9 @@ export const useMatchStore = create<MatchState>((set, get) => {
         isFrameSecured: false,
         requiresSnookers: {},
         statusText: 'Frame setup incomplete',
+        lastActionAt: null,
+        frameAnalytics: {},
+        currentBreak: 0,
       };
     }
 
@@ -298,6 +321,84 @@ export const useMatchStore = create<MatchState>((set, get) => {
     const playersList = fPlayers.map(fp => ({ id: fp.player_id, name: fp.player.name }));
     const evaluation = evaluateFrameStatus(scores, playersList, pointsRemaining);
 
+    // 6. Calculate Time Analytics
+    const frameAnalytics: Record<string, PlayerAnalytics> = {};
+    fPlayers.forEach(p => {
+      frameAnalytics[p.player_id] = {
+        playerId: p.player_id,
+        name: p.player.name,
+        totalTime: 0,
+        averageShot: 0,
+        fastestShot: Infinity,
+        slowestShot: 0,
+        visits: 0,
+        share: 0,
+      };
+    });
+
+    let totalFrameTime = 0;
+    let lastPlayerId: string | null = null;
+    const shotCounts: Record<string, number> = {};
+    fPlayers.forEach(p => {
+      shotCounts[p.player_id] = 0;
+    });
+
+    activeEvents.forEach(e => {
+      if (e.event_type !== 'pot' && e.event_type !== 'foul' && e.event_type !== 'pass_turn') {
+        return;
+      }
+
+      const pId = e.player_id;
+      if (!pId || !frameAnalytics[pId]) return;
+
+      const duration = e.metadata?.duration_seconds || 0;
+      frameAnalytics[pId].totalTime += duration;
+      totalFrameTime += duration;
+
+      shotCounts[pId] += 1;
+      if (duration < frameAnalytics[pId].fastestShot) {
+        frameAnalytics[pId].fastestShot = duration;
+      }
+      if (duration > frameAnalytics[pId].slowestShot) {
+        frameAnalytics[pId].slowestShot = duration;
+      }
+
+      if (pId !== lastPlayerId) {
+        frameAnalytics[pId].visits += 1;
+        lastPlayerId = pId;
+      }
+    });
+
+    fPlayers.forEach(p => {
+      const a = frameAnalytics[p.player_id];
+      const shots = shotCounts[p.player_id];
+      if (shots > 0) {
+        a.averageShot = a.totalTime / shots;
+      }
+      if (a.fastestShot === Infinity) {
+        a.fastestShot = 0;
+      }
+      if (totalFrameTime > 0) {
+        a.share = Math.round((a.totalTime / totalFrameTime) * 100);
+      }
+    });
+
+    const lastActionAt = activeEvents.length > 0
+      ? activeEvents[activeEvents.length - 1].created_at
+      : frame.created_at;
+
+    // Calculate current break (consecutive pots by active player from the end)
+    let currentBreak = 0;
+    for (let i = activeEvents.length - 1; i >= 0; i--) {
+      const ev = activeEvents[i];
+      if (ev.player_id !== activePlayerId) break;
+      if (ev.event_type === 'pot') {
+        currentBreak += ev.points;
+      } else {
+        break;
+      }
+    }
+
     return {
       scores,
       teamScores,
@@ -308,6 +409,9 @@ export const useMatchStore = create<MatchState>((set, get) => {
       isFrameSecured: evaluation.isSecured,
       requiresSnookers: evaluation.requiresSnookers,
       statusText: evaluation.statusText,
+      lastActionAt,
+      frameAnalytics,
+      currentBreak,
     };
   };
 
@@ -362,6 +466,12 @@ export const useMatchStore = create<MatchState>((set, get) => {
     lastEventId: null,
     undoTimerActive: false,
 
+    // Turn Timer & Audio states
+    lastActionAt: null,
+    frameAnalytics: {},
+    currentBreak: 0,
+    soundEnabled: typeof window !== 'undefined' ? localStorage.getItem('bee_snooker_muted') !== 'true' : true,
+
     // Actions
     setGroup: (group: Group) => {
       set({ activeGroup: group });
@@ -408,6 +518,11 @@ export const useMatchStore = create<MatchState>((set, get) => {
           set({ session: null, user: null });
         }
       });
+    },
+
+    setSoundEnabled: (enabled: boolean) => {
+      sounds.setMuted(!enabled);
+      set({ soundEnabled: enabled });
     },
 
     initializeDevice: async (groupId: string) => {
@@ -594,6 +709,9 @@ export const useMatchStore = create<MatchState>((set, get) => {
       const client = getSupabaseClient();
       const seqNo = get().frameEvents.length + 1;
       
+      const lastAction = get().lastActionAt || frame.created_at;
+      const durationSeconds = Math.max(0, (Date.now() - new Date(lastAction).getTime()) / 1000);
+
       const { data: event, error } = await client
         .from('frame_events')
         .insert({
@@ -604,11 +722,20 @@ export const useMatchStore = create<MatchState>((set, get) => {
           points: BALL_VALUES[ball] || 0,
           sequence_no: seqNo,
           device_info: `Controller (${get().deviceId.slice(0,6)})`,
+          metadata: {
+            duration_seconds: durationSeconds,
+          },
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      if (ball === 'red') {
+        sounds.playPotRed();
+      } else {
+        sounds.playPotColor();
+      }
 
       // Update state locally (Realtime channel also fires, but local update keeps it responsive)
       const updatedEvents = [...get().frameEvents, event];
@@ -638,6 +765,9 @@ export const useMatchStore = create<MatchState>((set, get) => {
       const basePoints = BALL_VALUES[ball] || 4;
       const points = customPoints !== undefined ? customPoints : Math.max(4, basePoints);
 
+      const lastAction = get().lastActionAt || frame.created_at;
+      const durationSeconds = Math.max(0, (Date.now() - new Date(lastAction).getTime()) / 1000);
+
       const { data: event, error } = await client
         .from('frame_events')
         .insert({
@@ -648,12 +778,17 @@ export const useMatchStore = create<MatchState>((set, get) => {
           points,
           sequence_no: seqNo,
           device_info: `Controller (${get().deviceId.slice(0,6)})`,
-          metadata: metadata || null,
+          metadata: {
+            ...(metadata || {}),
+            duration_seconds: durationSeconds,
+          },
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      sounds.playFoul();
 
       const updatedEvents = [...get().frameEvents, event];
       const reduced = reduceFrameState(updatedEvents, frame, get().framePlayers);
@@ -679,6 +814,9 @@ export const useMatchStore = create<MatchState>((set, get) => {
       const client = getSupabaseClient();
       const seqNo = get().frameEvents.length + 1;
 
+      const lastAction = get().lastActionAt || frame.created_at;
+      const durationSeconds = Math.max(0, (Date.now() - new Date(lastAction).getTime()) / 1000);
+
       const { data: event, error } = await client
         .from('frame_events')
         .insert({
@@ -688,11 +826,16 @@ export const useMatchStore = create<MatchState>((set, get) => {
           points: 0,
           sequence_no: seqNo,
           device_info: `Controller (${get().deviceId.slice(0,6)})`,
+          metadata: {
+            duration_seconds: durationSeconds,
+          },
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      sounds.playTurnChange();
 
       const updatedEvents = [...get().frameEvents, event];
       const reduced = reduceFrameState(updatedEvents, frame, get().framePlayers);
@@ -735,6 +878,8 @@ export const useMatchStore = create<MatchState>((set, get) => {
         .single();
 
       if (error) throw error;
+
+      sounds.playButtonTap();
 
       const updatedEvents = [...get().frameEvents, undoEvent];
       const reduced = reduceFrameState(updatedEvents, frame, get().framePlayers);
@@ -796,6 +941,8 @@ export const useMatchStore = create<MatchState>((set, get) => {
         .eq('id', frame.id);
 
       if (error) throw error;
+
+      sounds.playFrameWon();
 
       // Adjust ELO rankings in the background for active frame completion
       // We will perform ELO updates in our page logic or custom RPC

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Info, ChevronDown, Circle, Target, Award } from 'lucide-react';
+import { ShieldCheck, Info, ChevronDown, Circle, Target } from 'lucide-react';
 
 interface MathematicalPanelProps {
   redsRemaining: number;
@@ -12,14 +12,14 @@ interface MathematicalPanelProps {
 
 // Ball color map for the "Ball On" indicator dot
 const BALL_DOT_COLORS: Record<string, string> = {
-  red: 'bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]',
-  color: 'bg-gradient-to-r from-yellow-400 via-green-500 to-blue-600 shadow-[0_0_10px_rgba(16,185,129,0.5)]',
-  yellow: 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]',
-  green: 'bg-emerald-600 shadow-[0_0_10px_rgba(16,185,129,0.5)]',
-  brown: 'bg-amber-800 shadow-[0_0_10px_rgba(146,64,14,0.5)]',
-  blue: 'bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]',
-  pink: 'bg-pink-400 shadow-[0_0_10px_rgba(244,114,182,0.5)]',
-  black: 'bg-zinc-900 border border-zinc-650 shadow-[0_0_10px_rgba(39,39,42,0.5)]',
+  red: 'bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.5)]',
+  color: 'bg-gradient-to-r from-yellow-400 via-green-500 to-blue-600 shadow-[0_0_8px_rgba(16,185,129,0.5)]',
+  yellow: 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]',
+  green: 'bg-emerald-600 shadow-[0_0_8px_rgba(16,185,129,0.5)]',
+  brown: 'bg-amber-800 shadow-[0_0_8px_rgba(146,64,14,0.5)]',
+  blue: 'bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.5)]',
+  pink: 'bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.5)]',
+  black: 'bg-zinc-900 border border-zinc-650 shadow-[0_0_8px_rgba(39,39,42,0.5)]',
 };
 
 const BALL_TEXT_COLORS: Record<string, string> = {
@@ -126,78 +126,58 @@ export const MathematicalPanel: React.FC<MathematicalPanelProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* 2. MOBILE LANDSCAPE VIEW: Compact Single-Row Info Bar     */}
+      {/* 2. MOBILE VIEW: Compact Single-Line Info Strip           */}
       {/* ======================================================== */}
-      <div className={`lg:hidden flex rounded-xl border transition-all duration-300 ${
+      <div className={`lg:hidden rounded-xl border transition-all duration-300 ${
         isFrameSecured
           ? 'border-emerald-500/30 bg-emerald-500/5'
           : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30'
       }`}>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 text-xs w-full">
-          {/* Reds Left */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-zinc-400 dark:text-zinc-550 font-medium">Reds</span>
-            <span className="font-bold font-mono text-rose-600 dark:text-rose-400">{redsRemaining}</span>
-          </div>
-
-          <div className="w-px h-3.5 bg-zinc-255 dark:bg-zinc-800" />
-
-          {/* Points Left */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-zinc-400 dark:text-zinc-550 font-medium">Points</span>
-            <span className="font-bold font-mono text-emerald-700 dark:text-emerald-400">{pointsRemaining}</span>
-          </div>
-
-          <div className="w-px h-3.5 bg-zinc-255 dark:bg-zinc-800" />
-
-          {/* Ball On */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-zinc-400 dark:text-zinc-550 font-medium">Ball On</span>
-            <div className="flex items-center gap-1">
-              <div className={`w-3 h-3 rounded-full ${ballDot}`} />
-              <span className={`font-bold uppercase ${ballTextColor}`}>
-                {currentColorOn || 'None'}
+        <div className="flex items-center justify-between px-3 py-2 text-xs">
+          {/* Left: Key info items */}
+          <div className="flex items-center gap-3">
+            {/* Ball On */}
+            <div className="flex items-center gap-1.5">
+              <div className={`w-3 h-3 rounded-full shrink-0 ${ballDot}`} />
+              <span className={`font-bold uppercase text-[11px] ${ballTextColor}`}>
+                {currentColorOn || '—'}
               </span>
+            </div>
+
+            <div className="w-px h-3.5 bg-zinc-200 dark:bg-zinc-800" />
+
+            {/* Reds Left */}
+            <div className="flex items-center gap-1">
+              <span className="text-zinc-400 dark:text-zinc-550 font-medium text-[11px]">Reds</span>
+              <span className="font-bold font-mono text-rose-600 dark:text-rose-400">{redsRemaining}</span>
+            </div>
+
+            <div className="w-px h-3.5 bg-zinc-200 dark:bg-zinc-800" />
+
+            {/* Points Left */}
+            <div className="flex items-center gap-1">
+              <span className="text-zinc-400 dark:text-zinc-550 font-medium text-[11px]">Pts</span>
+              <span className="font-bold font-mono text-emerald-700 dark:text-emerald-400">{pointsRemaining}</span>
             </div>
           </div>
 
-          <div className="w-px h-3.5 bg-zinc-255 dark:bg-zinc-800" />
-
-          {/* Current Striker */}
-          {activePlayerName && (
-            <>
-              <div className="flex items-center gap-1.5">
-                <span className="text-zinc-400 dark:text-zinc-550 font-medium">Striker</span>
-                <span className="font-bold text-emerald-700 dark:text-emerald-300">{activePlayerName}</span>
-              </div>
-              <div className="w-px h-3.5 bg-zinc-255 dark:bg-zinc-800" />
-            </>
-          )}
-
-          {/* Frame Status Indicator */}
-          <div className="flex items-center gap-1.5">
-            {isFrameSecured ? (
-              <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
-            ) : (
-              <Info size={13} className="text-zinc-400" />
-            )}
-            <span className={`font-semibold ${
+          {/* Right: Frame Status + Expand */}
+          <div className="flex items-center gap-2">
+            <span className={`font-semibold text-[11px] ${
               isFrameSecured ? 'text-emerald-700 dark:text-emerald-400' : 'text-zinc-500 dark:text-zinc-450'
             }`}>
-              {isFrameSecured ? 'Secured' : 'Active'}
+              {isFrameSecured ? '✓ Secured' : 'Active'}
             </span>
-          </div>
 
-          {/* Expand/collapse toggle for analysis text */}
-          {statusText && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="ml-auto flex items-center gap-0.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-            >
-              <span className="text-[10px] font-medium">Details</span>
-              <ChevronDown size={12} className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
-            </button>
-          )}
+            {statusText && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="flex items-center gap-0.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors p-0.5"
+              >
+                <ChevronDown size={14} className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Expandable analysis section */}

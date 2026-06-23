@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import PWAClient from "@/components/shared/PWAClient";
 import ThemeToggle from "@/components/shared/ThemeToggle";
+import SoundToggle from "@/components/shared/SoundToggle";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -52,6 +53,7 @@ export default function RootLayout({
         <PWAClient />
         {children}
         <ThemeToggle />
+        <SoundToggle />
       </body>
     </html>
   );

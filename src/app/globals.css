@@ -6,20 +6,15 @@
 :root {
   --background: #ffffff;
   --foreground: #09090b;
-  --card-bg: #ffffff;
-  --card-border: #e4e4e7;
-  --muted: #71717a;
   --accent: #059669;
   --accent-glow: rgba(5, 150, 105, 0.25);
+  --touch-min: 48px;
 }
 
 /* ===== Dark Mode ===== */
 .dark {
   --background: #09090b;
   --foreground: #f4f4f5;
-  --card-bg: #09090b;
-  --card-border: #27272a;
-  --muted: #a1a1aa;
   --accent: #34d399;
   --accent-glow: rgba(52, 211, 153, 0.3);
 }
@@ -73,9 +68,9 @@ body {
   to { opacity: 1; }
 }
 
-/* Slide up entry */
+/* Slide up entry — used by bottom sheet dialog */
 @keyframes slideUp {
-  from { transform: translateY(12px); opacity: 0; }
+  from { transform: translateY(16px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
@@ -85,12 +80,6 @@ body {
   40% { transform: scale(0.92); }
   70% { transform: scale(1.05); }
   100% { transform: scale(1); }
-}
-
-/* Active player card glow pulse */
-@keyframes activeGlow {
-  0%, 100% { box-shadow: 0 0 8px var(--accent-glow), 0 0 0 1px var(--accent); }
-  50% { box-shadow: 0 0 16px var(--accent-glow), 0 0 0 1px var(--accent); }
 }
 
 /* Theme toggle icon rotation */
@@ -103,12 +92,6 @@ body {
 @keyframes drawerSlideIn {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
-}
-
-/* Drawer slide out to right */
-@keyframes drawerSlideOut {
-  from { transform: translateX(0); }
-  to { transform: translateX(100%); }
 }
 
 /* Timeline entry pop-in */
@@ -124,15 +107,11 @@ body {
 }
 
 .animate-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-score-pop {
   animation: scorePop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.animate-active-glow {
-  animation: activeGlow 2s ease-in-out infinite;
 }
 
 .animate-theme-icon {
@@ -161,11 +140,6 @@ body {
   border: 1px solid rgba(228, 228, 231, 0.5);
 }
 
-/* Mobile landscape target classes (default state) */
-.mobile-landscape-only {
-  display: none !important;
-}
-
 /* ===== Landscape-specific overrides ===== */
 @media (orientation: landscape) and (max-height: 500px) {
   /* Tighter spacing in landscape mobile */
@@ -186,12 +160,18 @@ body {
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
   }
-  /* Show only in mobile landscape */
-  .mobile-landscape-only {
-    display: flex !important;
+}
+
+/* ===== Mobile touch target enforcement ===== */
+@media (hover: none) and (pointer: coarse) {
+  /* Ensure buttons/interactive elements have minimum touch size */
+  button, [role="button"], a {
+    min-height: 44px;
+    min-width: 44px;
   }
-  /* Hide in mobile landscape */
-  .mobile-landscape-hidden {
-    display: none !important;
+  /* Exception for inline/small buttons that handle their own sizing */
+  .inline-touch-exempt {
+    min-height: auto;
+    min-width: auto;
   }
 }

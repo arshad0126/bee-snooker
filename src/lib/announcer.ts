@@ -1,4 +1,5 @@
 import { FrameEvent, Player, FramePlayer } from './store';
+import { sounds } from './sound';
 
 // Helper to check for browser speech synthesis support
 const getSpeechUtterance = (text: string): SpeechSynthesisUtterance | null => {
@@ -28,6 +29,7 @@ export const announceEvent = (
   scores: Record<string, number>
 ) => {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  if (sounds.isMuted()) return;
 
   // 1. Resolve active events list (filter out undone events)
   const undoneEventIds = new Set<string>();
