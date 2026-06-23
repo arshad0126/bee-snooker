@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase, getSupabaseClient } from './supabase';
-import { calculatePointsRemaining, evaluateFrameStatus, BALL_VALUES, COLOR_SEQUENCE } from './snooker';
+import { calculatePointsRemaining, evaluateFrameStatus, BALL_VALUES, COLOR_SEQUENCE, calculateTeamElo, calculateMultiplayerElo } from './snooker';
 import { sounds } from './sound';
 
 export interface Player {
@@ -939,6 +939,7 @@ export const useMatchStore = create<MatchState>((set, get) => {
       const client = getSupabaseClient();
       const resolvedWinnerId = winnerId || get().activePlayerId || null;
 
+      // 1. Update the frame status to completed in the database
       const { error } = await client
         .from('frames')
         .update({
@@ -953,8 +954,73 @@ export const useMatchStore = create<MatchState>((set, get) => {
 
       sounds.playFrameWon();
 
-      // Adjust ELO rankings in the background for active frame completion
-      // We will perform ELO updates in our page logic or custom RPC
+      // 2. Adjust ELO rankings for active frame completion
+      try {
+        let adjustments: Record<string, number> = {};
+
+        if (frame.mode === 'team') {
+          const teamA = get().framePlayers
+            .filter(fp => fp.team_id === 'team_a')
+            .map(fp => ({ id: fp.player_id, rating: fp.player.elo_rating }));
+          const teamB = get().framePlayers
+            .filter(fp => fp.team_id === 'team_b')
+            .map(fp => ({ id: fp.player_id, rating: fp.player.elo_rating }));
+          
+          adjustments = calculateTeamElo(teamA, teamB, winnerTeam || 'draw');
+        } else {
+          // Free For All / 1v1
+          const playerScores = get().framePlayers.map(fp => ({
+            id: fp.player_id,
+            rating: fp.player.elo_rating,
+            score: get().scores[fp.player_id] || 0,
+          }));
+
+          // Sort descending by score
+          playerScores.sort((a, b) => b.score - a.score);
+
+          // Assign ranks (winner is always rank 1)
+          const rankList = playerScores.map((p, idx) => {
+            let rank = idx + 1;
+            if (resolvedWinnerId && p.id === resolvedWinnerId) {
+              rank = 1;
+            } else if (resolvedWinnerId) {
+              rank = idx + 2;
+            }
+            return { id: p.id, rating: p.rating, rank };
+          });
+
+          if (resolvedWinnerId) {
+            const winnerIndex = rankList.findIndex(r => r.id === resolvedWinnerId);
+            if (winnerIndex !== -1) {
+              const [winner] = rankList.splice(winnerIndex, 1);
+              winner.rank = 1;
+              rankList.unshift(winner);
+              rankList.forEach((r, idx) => {
+                r.rank = idx + 1;
+              });
+            }
+          }
+
+          adjustments = calculateMultiplayerElo(rankList);
+        }
+
+        // Apply ELO rating updates to players in the database
+        for (const playerId of Object.keys(adjustments)) {
+          const change = adjustments[playerId];
+          const fp = get().framePlayers.find(p => p.player_id === playerId);
+          if (!fp) continue;
+          
+          const newRating = Math.max(100, fp.player.elo_rating + change); // Enforce ELO >= 100
+
+          await client
+            .from('players')
+            .update({ elo_rating: newRating })
+            .eq('id', playerId);
+        }
+      } catch (eloErr) {
+        console.error('Failed to update ELO ratings:', eloErr);
+      }
+
       set({
         activeFrame: null,
         frameEvents: [],

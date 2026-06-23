@@ -33,6 +33,25 @@ export default function Home() {
     }
   }, []);
 
+  // Parse error parameters from the hash on load (common Supabase OAuth failure callback)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      
+      const params = new URLSearchParams(hash.replace('#', '?') || search);
+      const error = params.get('error');
+      const errorDescription = params.get('error_description');
+      
+      if (error) {
+        alert(`Authentication Error: ${errorDescription || error}`);
+        // Clean up url parameters to prevent repeating alert on refresh
+        const cleanUrl = window.location.pathname + window.location.search.replace(/[\?&]error[^&]*/g, '');
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  }, []);
+
   // Load recent groups from localstorage with automatic cleanup of old preloaded mock data
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -120,14 +139,12 @@ export default function Home() {
       const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       // Create group on server (bypass auth headers for group creation)
       const client = getSupabaseClient();
-      const ownerId = user?.id && user.id !== 'pwa-local-admin' ? user.id : null;
-      
       const { data: group, error } = await client
         .from('groups')
         .insert({
           name: newGroupName.trim(),
           secret_code: randomCode,
-          owner_id: ownerId,
+          owner_id: user?.id || null,
         })
         .select()
         .single();
@@ -338,36 +355,15 @@ export default function Home() {
                   </div>
 
                   {!user ? (
-                    <div className="space-y-3">
-                      <Button
-                        type="button"
-                        onClick={signInWithGoogle}
-                        className="w-full bg-zinc-900 dark:bg-zinc-850 hover:bg-zinc-850 dark:hover:bg-zinc-800 text-white h-10 rounded-xl text-xs font-bold flex justify-center items-center gap-2"
-                        disabled={loading || localLoading}
-                      >
-                        <LogIn size={14} />
-                        Sign in with Google to Create
-                      </Button>
-                      <div className="text-center">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Instant bypass for PWA / Mobile to prevent external redirects
-                            useMatchStore.setState({
-                              user: {
-                                id: 'pwa-local-admin',
-                                email: 'pwa.admin@bee-snooker.local',
-                                user_metadata: { full_name: 'PWA Local Admin' }
-                              } as any,
-                              session: { access_token: 'pwa-token' } as any
-                            });
-                          }}
-                          className="text-[10px] text-zinc-500 hover:text-zinc-350 underline underline-offset-2"
-                        >
-                          PWA / Mobile: Bypass Google Login
-                        </button>
-                      </div>
-                    </div>
+                    <Button
+                      type="button"
+                      onClick={signInWithGoogle}
+                      className="w-full bg-zinc-900 dark:bg-zinc-850 hover:bg-zinc-850 dark:hover:bg-zinc-800 text-white h-10 rounded-xl text-xs font-bold flex justify-center items-center gap-2"
+                      disabled={loading || localLoading}
+                    >
+                      <LogIn size={14} />
+                      Sign in with Google to Create
+                    </Button>
                   ) : (
                     <form onSubmit={handleCreate} className="space-y-3">
                       <div className="flex items-center justify-between p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 text-[10px] text-zinc-500">

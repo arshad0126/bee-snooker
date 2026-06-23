@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Card, CardContent, Dialog, Select, Input } from '../ui';
 import { RotateCcw, AlertTriangle, CheckCircle, RefreshCw, ArrowRight, Info } from 'lucide-react';
+import { useMatchStore } from '../../lib/store';
 
 interface ControllerPanelProps {
   activePlayerName: string;
@@ -193,6 +194,31 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
     onUndo();
   };
 
+  const handleOpenEndFrameDialog = () => {
+    const storeState = useMatchStore.getState();
+    const currentScores = storeState.scores;
+    const currentTeamScores = storeState.teamScores;
+
+    if (mode === 'team') {
+      const winnerTeam = currentTeamScores.team_a >= currentTeamScores.team_b ? 'team_a' : 'team_b';
+      setFrameWinnerTeam(winnerTeam);
+    } else {
+      let highestScore = -1;
+      let winnerId = activePlayerId;
+      
+      players.forEach(p => {
+        const score = currentScores[p.id] || 0;
+        if (score > highestScore) {
+          highestScore = score;
+          winnerId = p.id;
+        }
+      });
+      
+      setFrameWinnerId(winnerId);
+    }
+    setEndFrameDialogOpen(true);
+  };
+
   const handleEndFrameSubmit = () => {
     onEndFrame(
       mode === 'team' ? undefined : frameWinnerId,
@@ -224,7 +250,7 @@ export const ControllerPanel: React.FC<ControllerPanelProps> = ({
         <div className="flex items-center gap-2.5">
           <Button
             variant="outline"
-            onClick={() => setEndFrameDialogOpen(true)}
+            onClick={handleOpenEndFrameDialog}
             className="border-rose-500/25 dark:border-rose-550/20 text-rose-600 dark:text-rose-400 hover:bg-rose-500/5 hover:text-rose-700 font-extrabold text-[11px] h-8 px-2.5 rounded-lg active:scale-95"
           >
             End Frame
