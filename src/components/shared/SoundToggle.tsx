@@ -21,7 +21,7 @@ export default function SoundToggle() {
     <button
       onClick={toggle}
       aria-label={soundEnabled ? 'Mute application' : 'Unmute application'}
-      className="fixed top-3 right-14 z-50 w-9 h-9 rounded-full flex items-center justify-center
+      className="fixed bottom-4 right-16 z-50 w-9 h-9 rounded-full flex items-center justify-center
         bg-zinc-100/80 dark:bg-zinc-900/80 backdrop-blur-md
         border border-zinc-200/60 dark:border-zinc-700/40
         shadow-sm

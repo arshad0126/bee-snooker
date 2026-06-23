@@ -208,7 +208,7 @@ export default function ActiveSession() {
   const groupPlayersLookup = framePlayers.map(fp => fp.player);
 
   return (
-    <div className="space-y-3 landscape-compact" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+    <div className="space-y-3 landscape-compact active-scoring-page" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       
       {/* Active Session Header */}
       <div className="flex items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-900 pb-2.5 shrink-0">

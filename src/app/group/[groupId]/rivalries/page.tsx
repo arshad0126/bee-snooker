@@ -49,7 +49,7 @@ export default function Rivalries() {
       const { data: framesData } = await client
         .from('frames')
         .select('*, session:sessions!inner(*)')
-        .eq('sessions.group_id', groupId);
+        .eq('session.group_id', groupId);
       setFrames(framesData || []);
 
       const { data: framePlayersData } = await client

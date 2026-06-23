@@ -67,7 +67,7 @@ export default function GroupDashboard() {
       const { data: frames } = await client
         .from('frames')
         .select('*, session:sessions!inner(*)')
-        .eq('sessions.group_id', groupId);
+        .eq('session.group_id', groupId);
 
       const { data: framePlayers } = await client
         .from('frame_players')
