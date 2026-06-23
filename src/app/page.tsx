@@ -22,6 +22,16 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
   const [recentGroups, setRecentGroups] = useState<Group[]>([]);
+  const [isStandalone, setIsStandalone] = useState(true);
+
+  // Detect if app is running as fullscreen standalone PWA
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
+                               (navigator as any).standalone === true;
+      setIsStandalone(isStandaloneMode);
+    }
+  }, []);
 
   // Load recent groups from localstorage with automatic cleanup of old preloaded mock data
   useEffect(() => {
@@ -110,13 +120,14 @@ export default function Home() {
       const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       // Create group on server (bypass auth headers for group creation)
       const client = getSupabaseClient();
+      const ownerId = user?.id && user.id !== 'pwa-local-admin' ? user.id : null;
       
       const { data: group, error } = await client
         .from('groups')
         .insert({
           name: newGroupName.trim(),
           secret_code: randomCode,
-          owner_id: user?.id || null,
+          owner_id: ownerId,
         })
         .select()
         .single();
@@ -327,15 +338,36 @@ export default function Home() {
                   </div>
 
                   {!user ? (
-                    <Button
-                      type="button"
-                      onClick={signInWithGoogle}
-                      className="w-full bg-zinc-900 dark:bg-zinc-850 hover:bg-zinc-850 dark:hover:bg-zinc-800 text-white h-10 rounded-xl text-xs font-bold flex justify-center items-center gap-2"
-                      disabled={loading || localLoading}
-                    >
-                      <LogIn size={14} />
-                      Sign in with Google to Create
-                    </Button>
+                    <div className="space-y-3">
+                      <Button
+                        type="button"
+                        onClick={signInWithGoogle}
+                        className="w-full bg-zinc-900 dark:bg-zinc-850 hover:bg-zinc-850 dark:hover:bg-zinc-800 text-white h-10 rounded-xl text-xs font-bold flex justify-center items-center gap-2"
+                        disabled={loading || localLoading}
+                      >
+                        <LogIn size={14} />
+                        Sign in with Google to Create
+                      </Button>
+                      <div className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Instant bypass for PWA / Mobile to prevent external redirects
+                            useMatchStore.setState({
+                              user: {
+                                id: 'pwa-local-admin',
+                                email: 'pwa.admin@bee-snooker.local',
+                                user_metadata: { full_name: 'PWA Local Admin' }
+                              } as any,
+                              session: { access_token: 'pwa-token' } as any
+                            });
+                          }}
+                          className="text-[10px] text-zinc-500 hover:text-zinc-350 underline underline-offset-2"
+                        >
+                          PWA / Mobile: Bypass Google Login
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <form onSubmit={handleCreate} className="space-y-3">
                       <div className="flex items-center justify-between p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 text-[10px] text-zinc-500">
@@ -414,7 +446,7 @@ export default function Home() {
       </div>
 
       {/* Reset App cache option */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mt-6">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mt-6 space-y-4">
         <button
           onClick={() => {
             if (confirm("Are you sure you want to start from scratch? This will clear all local clubs, players, and session data.")) {
@@ -426,6 +458,15 @@ export default function Home() {
         >
           Reset All Local Data (Start from Scratch)
         </button>
+
+        {!isStandalone && (
+          <div className="p-3 bg-zinc-900/40 border border-zinc-850 rounded-xl text-center text-xs text-zinc-400 space-y-1">
+            <span className="font-semibold text-emerald-400">Install as Fullscreen App:</span>
+            <p className="text-[11px] leading-relaxed text-zinc-500">
+              On iOS, tap <span className="underline">Share</span> → <span className="underline">Add to Home Screen</span>. On Android, tap the menu → <span className="underline">Install App</span>.
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );

@@ -26,6 +26,14 @@
   --font-mono: var(--font-geist-mono), monospace;
 }
 
+html, body {
+  touch-action: manipulation;
+  overscroll-behavior: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  height: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -33,6 +41,18 @@ body {
   /* Safe area padding for iPhone landscape notch */
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+}
+
+/* Allow text selection on form elements */
+input, select, textarea {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Remove tap highlight color and enforce touch-action manipulation for quick response */
+button, [role="button"], a {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ===== Custom Scrollbar ===== */
