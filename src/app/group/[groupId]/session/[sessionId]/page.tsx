@@ -276,24 +276,23 @@ export default function ActiveSession() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3">
           
-          {/* Main Game Interface — mobile-first vertical stack */}
-          <div className="lg:col-span-2 space-y-2 sm:space-y-2.5">
+          {/* Main Game Interface — mobile-first split layout */}
+          <div className="lg:col-span-2 scoring-layout-container">
             
-            {/* 1. Live digital scoreboard */}
-            <ScoreBoard
-              mode={activeFrame.mode}
-              players={framePlayers}
-              scores={scores}
-              teamScores={teamScores}
-              activePlayerId={activePlayerId}
-              requiresSnookers={requiresSnookers}
-              lastActionAt={lastActionAt}
-              frameAnalytics={frameAnalytics}
-              currentBreak={currentBreak}
-            />
+            {/* Left Column: Scoreboard + Info Strip */}
+            <div className="scoring-layout-left space-y-2">
+              <ScoreBoard
+                mode={activeFrame.mode}
+                players={framePlayers}
+                scores={scores}
+                teamScores={teamScores}
+                activePlayerId={activePlayerId}
+                requiresSnookers={requiresSnookers}
+                lastActionAt={lastActionAt}
+                frameAnalytics={frameAnalytics}
+                currentBreak={currentBreak}
+              />
 
-            {/* 2. Compact frame info strip — MOVED ABOVE controls on desktop, below on mobile */}
-            <div className="hidden sm:block">
               <MathematicalPanel
                 redsRemaining={redsRemaining}
                 pointsRemaining={pointsRemaining}
@@ -304,36 +303,26 @@ export default function ActiveSession() {
               />
             </div>
 
-            {/* 3. Scoring buttons + actions — PRIORITY on mobile (visible without scroll) */}
-            <ControllerPanel
-              activePlayerName={activePlayerName}
-              activePlayerId={activePlayerId || ''}
-              isController={isController}
-              currentColorOn={currentColorOn}
-              undoTimerActive={undoTimerActive}
-              onRecordPot={recordPot}
-              onRecordFoul={recordFoul}
-              onRecordPass={recordPassTurn}
-              onUndo={triggerUndo}
-              onResetFrame={resetFrame}
-              onEndFrame={handleEndFrame}
-              players={framePlayers.map(p => ({
-                id: p.player_id,
-                name: p.player.name,
-                team_id: p.team_id,
-              }))}
-              mode={activeFrame.mode}
-            />
-
-            {/* 4. Compact frame info strip — shown on mobile AFTER controls */}
-            <div className="sm:hidden">
-              <MathematicalPanel
-                redsRemaining={redsRemaining}
-                pointsRemaining={pointsRemaining}
-                isFrameSecured={isFrameSecured}
-                statusText={statusText}
-                currentColorOn={currentColorOn}
+            {/* Right Column: Scoring Controls */}
+            <div className="scoring-layout-right">
+              <ControllerPanel
                 activePlayerName={activePlayerName}
+                activePlayerId={activePlayerId || ''}
+                isController={isController}
+                currentColorOn={currentColorOn}
+                undoTimerActive={undoTimerActive}
+                onRecordPot={recordPot}
+                onRecordFoul={recordFoul}
+                onRecordPass={recordPassTurn}
+                onUndo={triggerUndo}
+                onResetFrame={resetFrame}
+                onEndFrame={handleEndFrame}
+                players={framePlayers.map(p => ({
+                  id: p.player_id,
+                  name: p.player.name,
+                  team_id: p.team_id,
+                }))}
+                mode={activeFrame.mode}
               />
             </div>
           </div>
