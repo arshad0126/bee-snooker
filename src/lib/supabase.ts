@@ -279,7 +279,102 @@ class MockQueryBuilder {
   }
 }
 
+class MockAuth {
+  private listeners: Array<(event: string, session: any) => void> = [];
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'mock_sb_session') {
+          const session = this.getLocalStorageSession();
+          this.notify(session ? 'SIGNED_IN' : 'SIGNED_OUT', session);
+        }
+      });
+    }
+  }
+
+  private getLocalStorageSession() {
+    if (typeof window === 'undefined') return null;
+    const sessionStr = localStorage.getItem('mock_sb_session');
+    if (!sessionStr) return null;
+    try {
+      return JSON.parse(sessionStr);
+    } catch {
+      return null;
+    }
+  }
+
+  private setLocalStorageSession(session: any) {
+    if (typeof window === 'undefined') return;
+    if (session) {
+      localStorage.setItem('mock_sb_session', JSON.stringify(session));
+    } else {
+      localStorage.removeItem('mock_sb_session');
+    }
+  }
+
+  private notify(event: string, session: any) {
+    this.listeners.forEach((listener) => {
+      try {
+        listener(event, session);
+      } catch (e) {
+        console.error('Error in auth listener', e);
+      }
+    });
+  }
+
+  async getSession() {
+    const session = this.getLocalStorageSession();
+    return { data: { session }, error: null };
+  }
+
+  async signInWithOAuth(options: { provider: string; options?: { redirectTo?: string } }) {
+    if (options.provider === 'google') {
+      const mockUser = {
+        id: 'mock-user-id-1234',
+        email: 'mock.admin@bee-snooker.com',
+        user_metadata: {
+          full_name: 'Mock Admin',
+          avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        },
+      };
+      const mockSession = {
+        access_token: 'mock-token',
+        user: mockUser,
+      };
+      this.setLocalStorageSession(mockSession);
+      this.notify('SIGNED_IN', mockSession);
+      return { data: { provider: 'google', url: '' }, error: null };
+    }
+    return { data: null, error: new Error('Unsupported provider') };
+  }
+
+  async signOut() {
+    this.setLocalStorageSession(null);
+    this.notify('SIGNED_OUT', null);
+    return { error: null };
+  }
+
+  onAuthStateChange(callback: (event: string, session: any) => void) {
+    this.listeners.push(callback);
+    // Call initially with current session
+    const session = this.getLocalStorageSession();
+    callback(session ? 'INITIAL_SESSION' : 'SIGNED_OUT', session);
+    return {
+      data: {
+        subscription: {
+          unsubscribe: () => {
+            this.listeners = this.listeners.filter((l) => l !== callback);
+          },
+        },
+      },
+    };
+  }
+}
+
 class MockSupabaseClient {
+  auth = new MockAuth();
+
   from(table: string) {
     return new MockQueryBuilder(table);
   }
@@ -317,26 +412,46 @@ export const supabase = isMock ? (new MockSupabaseClient() as any) : createClien
 const clientCache: Record<string, any> = {};
 
 // Dynamic client creator with custom group secret headers
-export const getSupabaseClient = (secretCode?: string) => {
+export const getSupabaseClient = (identifier?: string) => {
   if (isMock) {
     return new MockSupabaseClient() as any;
   }
 
-  if (!secretCode) {
-    if (typeof window !== 'undefined') {
-      const storedGroup = localStorage.getItem('bee_snooker_active_group');
-      if (storedGroup) {
-        try {
-          const group = JSON.parse(storedGroup);
-          secretCode = group.secret_code;
-        } catch (e) {
-          console.error('Failed to parse active group from localStorage', e);
+  // Check if identifier is a secret code starting with LOCAL-
+  if (identifier && identifier.startsWith('LOCAL-')) {
+    return new MockSupabaseClient() as any;
+  }
+
+  if (typeof window !== 'undefined') {
+    // Check if the identifier matches a local group ID or secret code in mock storage
+    const mockGroupsStr = localStorage.getItem('mock_sb_groups');
+    if (mockGroupsStr) {
+      try {
+        const mockGroups = JSON.parse(mockGroupsStr);
+        if (identifier && mockGroups.some((g: any) => g.id === identifier || g.secret_code === identifier)) {
+          return new MockSupabaseClient() as any;
         }
+      } catch {}
+    }
+
+    // Check if the active group is local
+    const storedGroup = localStorage.getItem('bee_snooker_active_group');
+    if (storedGroup) {
+      try {
+        const group = JSON.parse(storedGroup);
+        if (group.secret_code?.startsWith('LOCAL-') || (identifier && group.id === identifier)) {
+          if (group.secret_code?.startsWith('LOCAL-')) {
+            return new MockSupabaseClient() as any;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse active group from localStorage', e);
       }
     }
   }
 
-  const key = secretCode || 'default';
+  // Real Supabase path
+  const key = identifier || 'default';
   if (clientCache[key]) {
     return clientCache[key];
   }
@@ -346,7 +461,7 @@ export const getSupabaseClient = (secretCode?: string) => {
       persistSession: true,
     },
     global: {
-      headers: secretCode ? { 'x-group-secret': secretCode } : {},
+      headers: identifier ? { 'x-group-secret': identifier } : {},
     },
   });
 

@@ -18,7 +18,9 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'join' | 'create'>('join');
   const [joinCode, setJoinCode] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
+  const [localGroupName, setLocalGroupName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
   const [recentGroups, setRecentGroups] = useState<Group[]>([]);
 
   // Load recent groups from localstorage with automatic cleanup of old preloaded mock data
@@ -133,6 +135,39 @@ export default function Home() {
     }
   };
 
+  const handleCreateLocal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!localGroupName.trim()) return;
+
+    setLocalLoading(true);
+    try {
+      const randomCode = 'LOCAL-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const client = getSupabaseClient(randomCode);
+      
+      const { data: group, error } = await client
+        .from('groups')
+        .insert({
+          name: localGroupName.trim(),
+          secret_code: randomCode,
+          owner_id: null,
+        })
+        .select()
+        .single();
+
+      if (error || !group) {
+        throw error || new Error('Failed to create local group');
+      }
+
+      saveRecentGroup(group);
+      setGroup(group);
+      router.push(`/group/${group.id}`);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to create local club. Try again.');
+      setLocalLoading(false);
+    }
+  };
+
   const saveRecentGroup = (group: Group) => {
     const stored = localStorage.getItem('bee_snooker_recent_groups');
     let list: Group[] = [];
@@ -235,57 +270,104 @@ export default function Home() {
 
             {/* CREATE CLUB FORM */}
             {activeTab === 'create' && (
-              !user ? (
-                <div className="text-center py-4 space-y-4">
-                  <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                    Admin Access Required
+              <div className="space-y-6">
+                {/* Option 1: Local Only Club (No Login) */}
+                <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-950/10 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
+                      <Club size={18} />
+                    </div>
+                    <div className="space-y-0.5">
+                      <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">Local-Only Club</h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-normal">
+                        Store all club rosters, matches, and stats locally on this device. No internet or login required.
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-450 leading-relaxed max-w-sm mx-auto">
-                    Only authenticated club administrators can create and manage snooker club rosters. Spectators can join via code without logging in.
-                  </p>
-                  <Button
-                    type="button"
-                    onClick={signInWithGoogle}
-                    className="w-full bg-emerald-800 hover:bg-emerald-700 h-12 rounded-xl text-sm font-bold flex justify-center items-center gap-2 mt-2"
-                  >
-                    <LogIn size={16} />
-                    Sign in with Google
-                  </Button>
-                </div>
-              ) : (
-                <form onSubmit={handleCreate} className="space-y-4">
-                  <div className="flex items-center justify-between p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20 text-xs text-zinc-500">
-                    <span className="truncate">Admin: <strong>{user.email}</strong></span>
-                    <button
-                      type="button"
-                      onClick={signOut}
-                      className="text-rose-500 hover:text-rose-600 font-semibold underline underline-offset-2 ml-2 cursor-pointer"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase text-zinc-400">Club or Group Name</label>
+
+                  <form onSubmit={handleCreateLocal} className="space-y-3">
                     <Input
-                      placeholder="E.g. Lucknow Snooker Club"
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                      className="border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/40 text-zinc-800 dark:text-white text-base placeholder-zinc-500 h-12"
+                      placeholder="E.g. My Roster (Local)"
+                      value={localGroupName}
+                      onChange={(e) => setLocalGroupName(e.target.value)}
+                      className="border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/40 text-zinc-800 dark:text-white text-sm placeholder-zinc-450 dark:placeholder-zinc-550 h-10"
                       required
-                      disabled={loading}
+                      disabled={localLoading || loading}
                     />
+                    <Button
+                      type="submit"
+                      disabled={localLoading || loading || !localGroupName.trim()}
+                      className="w-full bg-emerald-800 hover:bg-emerald-700 text-white h-10 rounded-xl text-xs font-bold flex gap-1.5 justify-center items-center"
+                    >
+                      {localLoading ? 'Creating Local Club...' : 'Create Local Club'}
+                      {!localLoading && <ArrowRight size={14} />}
+                    </Button>
+                  </form>
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="h-[1px] grow bg-zinc-200 dark:bg-zinc-800"></div>
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Or</span>
+                  <div className="h-[1px] grow bg-zinc-200 dark:bg-zinc-800"></div>
+                </div>
+
+                {/* Option 2: Cloud Sync Club (Supabase) */}
+                <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-950/10 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
+                      <Trophy size={18} />
+                    </div>
+                    <div className="space-y-0.5">
+                      <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">Cloud-Synced Club</h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-normal">
+                        Save data in the cloud. Access or referee from multiple devices simultaneously. Requires Google Admin Login.
+                      </p>
+                    </div>
                   </div>
-                  <Button
-                    type="submit"
-                    disabled={loading || !newGroupName}
-                    className="w-full bg-emerald-800 hover:bg-emerald-700 h-12 rounded-xl text-sm font-bold flex gap-1.5"
-                  >
-                    {loading ? 'Creating...' : 'Create Club'}
-                    {!loading && <ArrowRight size={16} />}
-                  </Button>
-                </form>
-              )
+
+                  {!user ? (
+                    <Button
+                      type="button"
+                      onClick={signInWithGoogle}
+                      className="w-full bg-zinc-900 dark:bg-zinc-850 hover:bg-zinc-850 dark:hover:bg-zinc-800 text-white h-10 rounded-xl text-xs font-bold flex justify-center items-center gap-2"
+                      disabled={loading || localLoading}
+                    >
+                      <LogIn size={14} />
+                      Sign in with Google to Create
+                    </Button>
+                  ) : (
+                    <form onSubmit={handleCreate} className="space-y-3">
+                      <div className="flex items-center justify-between p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30 text-[10px] text-zinc-500">
+                        <span className="truncate">Admin: <strong className="text-zinc-700 dark:text-zinc-300">{user.email}</strong></span>
+                        <button
+                          type="button"
+                          onClick={signOut}
+                          className="text-rose-500 hover:text-rose-600 font-semibold underline underline-offset-2 cursor-pointer ml-1"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                      <Input
+                        placeholder="E.g. Lucknow Snooker Club"
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        className="border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/40 text-zinc-800 dark:text-white text-sm placeholder-zinc-450 dark:placeholder-zinc-550 h-10"
+                        required
+                        disabled={loading || localLoading}
+                      />
+                      <Button
+                        type="submit"
+                        disabled={loading || localLoading || !newGroupName.trim()}
+                        className="w-full bg-blue-800 hover:bg-blue-700 text-white h-10 rounded-xl text-xs font-bold flex gap-1.5 justify-center items-center"
+                      >
+                        {loading ? 'Creating Cloud Club...' : 'Create Cloud Club'}
+                        {!loading && <ArrowRight size={14} />}
+                      </Button>
+                    </form>
+                  )}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

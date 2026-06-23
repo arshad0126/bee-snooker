@@ -482,14 +482,23 @@ export const useMatchStore = create<MatchState>((set, get) => {
 
     signInWithGoogle: async () => {
       const client = getSupabaseClient();
-      if (!client.auth) return;
-      const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}` : '';
-      await client.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-        },
-      });
+      if (!client.auth) {
+        alert('Authentication is not available (Supabase client is not configured).');
+        return;
+      }
+      try {
+        const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}` : '';
+        const { error } = await client.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+          },
+        });
+        if (error) throw error;
+      } catch (err: any) {
+        console.error('Google Sign In Error:', err);
+        alert(`Google Sign In failed: ${err.message || err}`);
+      }
     },
 
     signOut: async () => {
