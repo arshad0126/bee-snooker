@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   title: "Bee Snooker — Every Shot Counts",
   description: "Modern snooker scoring, ELO ranking tracker, attendance history, and memory vault.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon-192.png",
+    shortcut: "/icons/icon-192.png",
+    apple: "/icons/icon-192.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

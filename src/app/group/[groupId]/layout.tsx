@@ -181,8 +181,10 @@ export default function GroupLayout({ children }: { children: React.ReactNode })
 
       {/* Main Page Area */}
       <div className="grow overflow-y-auto">
-        <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 transition-all ${
-          isScoringPage ? 'py-2 px-2 landscape-tight-padding' : ''
+        <main className={`transition-all ${
+          isScoringPage 
+            ? 'w-full max-w-none py-2 px-2 landscape-tight-padding' 
+            : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6'
         }`}>
           {children}
         </main>
