@@ -405,8 +405,11 @@ class MockSupabaseClient {
   }
 }
 
+// Singleton instance of MockSupabaseClient to share auth listeners and state across calls
+const globalMockClient = new MockSupabaseClient();
+
 // Global Supabase client instance
-export const supabase = isMock ? (new MockSupabaseClient() as any) : createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = isMock ? (globalMockClient as any) : createClient(supabaseUrl, supabaseAnonKey);
 
 // Cache for Supabase clients to avoid multiple instances warning and reuse sessions
 const clientCache: Record<string, any> = {};
@@ -414,12 +417,12 @@ const clientCache: Record<string, any> = {};
 // Dynamic client creator with custom group secret headers
 export const getSupabaseClient = (identifier?: string) => {
   if (isMock) {
-    return new MockSupabaseClient() as any;
+    return globalMockClient as any;
   }
 
   // Check if identifier is a secret code starting with LOCAL-
   if (identifier && identifier.startsWith('LOCAL-')) {
-    return new MockSupabaseClient() as any;
+    return globalMockClient as any;
   }
 
   if (typeof window !== 'undefined') {
@@ -429,7 +432,7 @@ export const getSupabaseClient = (identifier?: string) => {
       try {
         const mockGroups = JSON.parse(mockGroupsStr);
         if (identifier && mockGroups.some((g: any) => g.id === identifier || g.secret_code === identifier)) {
-          return new MockSupabaseClient() as any;
+          return globalMockClient as any;
         }
       } catch {}
     }
@@ -441,7 +444,7 @@ export const getSupabaseClient = (identifier?: string) => {
         const group = JSON.parse(storedGroup);
         if (group.secret_code?.startsWith('LOCAL-') || (identifier && group.id === identifier)) {
           if (group.secret_code?.startsWith('LOCAL-')) {
-            return new MockSupabaseClient() as any;
+            return globalMockClient as any;
           }
         }
       } catch (e) {
